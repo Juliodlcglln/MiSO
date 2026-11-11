@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080" role="img" aria-label="Fondo de MiSO Desktop">
+  <defs>
+    <radialGradient id="glow" cx="72%" cy="32%" r="72%">
+      <stop offset="0" stop-color="#12304A"/>
+      <stop offset="0.55" stop-color="#0B1220"/>
+      <stop offset="1" stop-color="#070B14"/>
+    </radialGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3DD6C4" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#1E3A5F" stop-opacity="0.1"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1920" height="1080" fill="url(#glow)"/>
+
+  <!-- Retícula sutil -->
+  <g stroke="#8FA6C4" stroke-opacity="0.06" stroke-width="1">
+    <path d="M0 180 H1920 M0 360 H1920 M0 540 H1920 M0 720 H1920 M0 900 H1920"/>
+    <path d="M240 0 V1080 M480 0 V1080 M720 0 V1080 M960 0 V1080 M1200 0 V1080 M1440 0 V1080 M1680 0 V1080"/>
+  </g>
+
+  <!-- Anillos -->
+  <g fill="none" stroke="url(#ring)">
+    <circle cx="1440" cy="380" r="110" stroke-width="2"/>
+    <circle cx="1440" cy="380" r="190" stroke-width="2" stroke-opacity="0.7"/>
+    <circle cx="1440" cy="380" r="290" stroke-width="2" stroke-opacity="0.5"/>
+    <circle cx="1440" cy="380" r="410" stroke-width="2" stroke-opacity="0.3"/>
+    <circle cx="1440" cy="380" r="550" stroke-width="2" stroke-opacity="0.18"/>
+  </g>
+
+  <!-- Marca -->
+  <g transform="translate(1440 380)">
+    <path d="M-64 72 V-72 L0 0 L64 -72 V72"
+          fill="none" stroke="#3DD6C4" stroke-width="14"
+          stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="0" cy="112" r="8" fill="#F2B84B"/>
+  </g>
+
+  <!-- Texto -->
+  <text x="120" y="820" font-family="DejaVu Sans, sans-serif" font-size="148"
+        font-weight="700" fill="#E6EDF7">MiSO</text>
+  <text x="128" y="884" font-family="DejaVu Sans, sans-serif" font-size="34"
+        letter-spacing="16" fill="#3DD6C4">DESKTOP</text>
+  <text x="130" y="944" font-family="DejaVu Sans, sans-serif" font-size="26"
+        fill="#8FA6C4">Linux para el laboratorio</text>
+
+  <!-- Línea de acento -->
+  <rect x="120" y="768" width="96" height="6" rx="3" fill="#F2B84B"/>
+</svg>

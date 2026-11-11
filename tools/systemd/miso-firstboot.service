@@ -1,0 +1,13 @@
+[Unit]
+Description=MiSO Desktop - configuración de primer arranque
+ConditionPathExists=!/var/lib/miso/firstboot-done
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/miso/miso-firstboot
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

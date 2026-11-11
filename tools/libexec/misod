@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+# misod - broker de privilegios de MiSO Desktop.
+# Se ejecuta como root a través de pkexec/polkit. No debe invocarse directamente.
+
+set -Eeuo pipefail
+
+LOG_DIR="/var/log/miso"
+LOG_FILE="${LOG_DIR}/misod.log"
+STATE_DIR="/var/lib/miso"
+
+[[ ${EUID} -eq 0 ]] || { echo "misod debe ejecutarse como root." >&2; exit 1; }
+mkdir -p "$LOG_DIR" "$STATE_DIR"
+umask 022
+
+log() {
+  printf '%s misod[%s] %s\n' "$(date -Is)" "$$" "$*" | tee -a "$LOG_FILE"
+}
+
+usage() {
+  cat <<EOF
+Uso: misod <verbo> [argumentos]
+
+Verbos:
+  update check|apply
+  rollback list|restore <instantánea>|boot <instantánea>
+  ring list|enable|disable <anillo>
+  install <paquete>
+  service <servicio> start|stop|restart|status
+EOF
+}
+
+cmd="${1:-}"
+shift || true
+
+case "$cmd" in
+  update)
+    sub="${1:-check}"
+    shift || true
+    case "$sub" in
+      check|apply)
+        log "update ${sub}"
+        exec /usr/bin/miso-updated "$sub" "$@"
+        ;;
+      *)
+        echo "Subcomando de update inválido: ${sub}" >&2
+        exit 2
+        ;;
+    esac
+    ;;
+
+  rollback)
+    sub="${1:-list}"
+    shift || true
+    case "$sub" in
+      list)
+        log "rollback list"
+        exec /usr/bin/miso-updated list
+        ;;
+      restore)
+        snap="${1:?Falta la instantánea}"
+        [[ "$snap" =~ ^[A-Za-z0-9._-]+$ ]] || {
+          echo "Nombre de instantánea inválido." >&2
+          exit 2
+        }
+        log "rollback restore ${snap}"
+        exec /usr/bin/miso-updated restore "$snap" --yes
+        ;;
+      boot)
+        snap="${1:?Falta la instantánea}"
+        [[ "$snap" =~ ^[A-Za-z0-9._-]+$ ]] || {
+          echo "Nombre de instantánea inválido." >&2
+          exit 2
+        }
+        log "rollback boot ${snap}"
+        exec /usr/bin/miso-updated boot "$snap"
+        ;;
+      *)
+        echo "Subcomando de rollback inválido: ${sub}" >&2
+        exit 2
+        ;;
+    esac
+    ;;
+
+  ring)
+    sub="${1:-list}"
+    shift || true
+    case "$sub" in
+      list)
+        log "ring list"
+        exec /usr/bin/miso-rings list
+        ;;
+      enable|disable)
+        ring="${1:?Falta el anillo}"
+        case "$ring" in
+          core|desktop|lab|apps) ;;
+          *)
+            echo "Anillo inválido: ${ring}" >&2
+            exit 2
+            ;;
+        esac
+        log "ring ${sub} ${ring}"
+        exec /usr/bin/miso-rings "$sub" "$ring"
+        ;;
+      *)
+        echo "Subcomando de ring inválido: ${sub}" >&2
+        exit 2
+        ;;
+    esac
+    ;;
+
+  install)
+    pkg="${1:?Falta el nombre del paquete}"
+    [[ "$pkg" =~ ^[a-z0-9][a-z0-9+.-]+$ ]] || {
+      echo "Nombre de paquete inválido." >&2
+      exit 2
+    }
+    log "install ${pkg}"
+    exec apt-get install -y -- "$pkg"
+    ;;
+
+  service)
+    svc="${1:?Falta el servicio}"
+    action="${2:?Falta la acción}"
+    [[ "$svc" =~ ^[A-Za-z0-9@_.-]+$ ]] || {
+      echo "Nombre de servicio inválido." >&2
+      exit 2
+    }
+    case "$action" in
+      start|stop|restart|status) ;;
+      *)
+        echo "Acción inválida: ${action}" >&2
+        exit 2
+        ;;
+    esac
+    log "service ${svc} ${action}"
+    exec systemctl "$action" "$svc"
+    ;;
+
+  help|-h|--help)
+    usage
+    ;;
+
+  *)
+    usage
+    exit 2
+    ;;
+esac

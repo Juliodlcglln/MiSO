@@ -1,0 +1,7 @@
+[General]
+# Branding MiSO sobre el tema Breeze de SDDM.
+# SDDM fusiona theme.conf.user encima de theme.conf.
+background=/usr/share/wallpapers/miso-default.png
+showlogo=shown
+logo=/usr/share/pixmaps/miso-logo.png
+color=#0f2a3d

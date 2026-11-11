@@ -1,0 +1,49 @@
+# Tema GRUB de MiSO Desktop
+# Se instala en /boot/grub/themes/miso/theme.txt
+
+title-text: ""
+desktop-color: "#0B1220"
+terminal-font: "Unifont Regular 16"
+
++ boot_menu {
+    left = 15%
+    top = 30%
+    width = 70%
+    height = 46%
+    item_font = "DejaVu Sans Regular 16"
+    item_color = "#E6EDF7"
+    selected_item_color = "#3DD6C4"
+    item_height = 34
+    item_spacing = 8
+    item_padding = 6
+}
+
++ label {
+    top = 9%
+    left = 0
+    width = 100%
+    align = "center"
+    text = "MiSO Desktop"
+    font = "DejaVu Sans Bold 30"
+    color = "#E6EDF7"
+}
+
++ label {
+    top = 16%
+    left = 0
+    width = 100%
+    align = "center"
+    text = "Un escritorio Linux para el laboratorio"
+    font = "DejaVu Sans Regular 14"
+    color = "#8FA6C4"
+}
+
++ label {
+    top = 84%
+    left = 0
+    width = 100%
+    align = "center"
+    text = "Selecciona una entrada y pulsa Enter"
+    font = "DejaVu Sans Regular 12"
+    color = "#5B6F8A"
+}

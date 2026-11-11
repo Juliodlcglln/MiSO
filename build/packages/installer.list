@@ -1,0 +1,21 @@
+# MiSO Desktop - Instalador
+# Calamares y herramientas de instalación.
+
+calamares
+partitionmanager
+efibootmgr
+grub-efi-amd64-bin
+grub-pc-bin
+grub-common
+grub2-common
+os-prober
+btrfs-progs
+dosfstools
+mtools
+squashfs-tools
+rsync
+cryptsetup
+cryptsetup-initramfs
+lvm2
+parted
+gdisk

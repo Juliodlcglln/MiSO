@@ -1,0 +1,38 @@
+---
+componentName: miso
+
+strings:
+  productName: MiSO Desktop
+  shortProductName: MiSO
+  version: 0.1.0 Genesis
+  shortVersion: 0.1.0
+  versionedName: MiSO Desktop 0.1.0 «Génesis»
+  shortVersionedName: MiSO 0.1.0
+  bootloaderEntryName: MiSO
+  productUrl: https://miso.local/
+  supportUrl: https://miso.local/soporte
+  knownIssuesUrl: https://miso.local/errores
+  releaseNotesUrl: https://miso.local/notas
+
+images:
+  productLogo: logo.png
+  productIcon: icon.png
+  productWelcome: welcome.png
+
+welcomeStyleCalamares: false
+welcomeExpandingLogo: true
+windowExpanding: normal
+windowSize: 900px,600px
+windowPlacement: center
+sidebar: widget
+navigation: widget
+
+# Colores del panel lateral (claves de Calamares 3.3).
+style:
+  SidebarBackground: "#0B1220"
+  SidebarText: "#E6EDF7"
+  SidebarBackgroundCurrent: "#12304A"
+  SidebarTextCurrent: "#3DD6C4"
+
+slideshow:
+  - welcome.png

@@ -1,0 +1,77 @@
+# MiSO Desktop - Anillo Desktop
+# KDE Plasma 6, PJD y la experiencia de escritorio.
+
+# Plasma
+kde-plasma-desktop
+plasma-workspace
+kwin-wayland
+kwin-x11
+kwin-addons
+plasma-nm
+plasma-pa
+plasma-discover
+plasma-discover-backend-flatpak
+plasma-discover-backend-fwupd
+plasma-widgets-addons
+plasma-runners-addons
+plasma-wallpapers-addons
+kdeplasma-addons-data
+kde-config-screenlocker
+kde-spectacle
+kinfocenter
+ksystemstats
+
+# Sesión y temas
+sddm
+sddm-theme-breeze
+xdg-desktop-portal-kde
+breeze-icon-theme
+hicolor-icon-theme
+adwaita-icon-theme
+plymouth
+plymouth-themes
+plymouth-label
+
+# Aplicaciones base
+konsole
+dolphin
+kate
+ark
+gwenview
+okular
+kcalc
+kdeconnect
+print-manager
+cups
+cups-pk-helper
+xdg-utils
+xdg-user-dirs
+kio-extras
+gvfs
+gvfs-backends
+udisks2
+upower
+power-profiles-daemon
+
+# Navegador y fuentes
+firefox-esr
+fonts-noto
+fonts-noto-color-emoji
+fonts-dejavu
+fonts-liberation
+fonts-hack
+
+# Audio
+pipewire
+pipewire-pulse
+wireplumber
+libspa-0.2-bluetooth
+pavucontrol-qt
+
+# Bluetooth
+bluedevil
+bluez
+bluez-firmware
+
+# Flatpak
+flatpak

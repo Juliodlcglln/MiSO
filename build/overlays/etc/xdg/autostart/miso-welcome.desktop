@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=MiSO Welcome
+Name[es]=Bienvenida a MiSO
+Comment=Guía rápida de MiSO Desktop
+Comment[es]=Guía rápida de MiSO Desktop
+Exec=konsole -e miso-welcome
+Icon=miso-logo
+Terminal=false
+Categories=System;
+OnlyShowIn=KDE;
+X-GNOME-Autostart-enabled=true

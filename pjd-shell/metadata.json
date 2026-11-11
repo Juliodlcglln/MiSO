@@ -1,0 +1,19 @@
+{
+  "KPlugin": {
+    "Id": "org.miso.pjd.desktop",
+    "Name": "PJD Shell",
+    "Description": "Capa de escritorio de MiSO Desktop sobre KDE Plasma",
+    "Version": "0.1.0",
+    "License": "GPL-3.0-or-later",
+    "Authors": [
+      {
+        "Name": "Equipo MiSO",
+        "Email": "equipo@miso.local"
+      }
+    ],
+    "EnabledByDefault": false,
+    "Icon": "miso-logo"
+  },
+  "X-Plasma-API": "6.0",
+  "KPackageStructure": "Plasma/LookAndFeel"
+}

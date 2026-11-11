@@ -1,0 +1,120 @@
+#!/usr/bin/env bash
+# MiSO Desktop - gestión de anillos opcionales.
+
+set -Eeuo pipefail
+
+STATE_DIR="/var/lib/miso/rings"
+LIST_DIR="/usr/share/miso/rings"
+RINGS=(core desktop lab apps)
+
+require_root() {
+  [[ ${EUID} -eq 0 ]] || {
+    echo "Esta operación requiere root (usa miso ring ...)." >&2
+    exit 1
+  }
+}
+
+usage() {
+  cat <<EOF
+Uso: miso-rings <list|enable|disable> [anillo]
+
+Anillos:
+  core     Obligatorio (base del sistema)
+  desktop  Obligatorio (KDE Plasma y PJD)
+  lab      Opcional (software científico y de laboratorio)
+  apps     Opcional (Flatpak + Flathub)
+EOF
+}
+
+ring_state() {
+  local ring="$1"
+  case "$ring" in
+    core|desktop) echo "obligatorio" ;;
+    lab|apps)
+      if [[ -f "${STATE_DIR}/${ring}.enabled" ]]; then
+        echo "habilitado"
+      else
+        echo "deshabilitado"
+      fi
+      ;;
+    *) echo "desconocido" ;;
+  esac
+}
+
+cmd_list() {
+  printf '%-10s %s\n' "ANILLO" "ESTADO"
+  local ring
+  for ring in "${RINGS[@]}"; do
+    printf '%-10s %s\n' "$ring" "$(ring_state "$ring")"
+  done
+}
+
+cmd_enable() {
+  local ring="${1:-}"
+  require_root
+  mkdir -p "$STATE_DIR"
+  case "$ring" in
+    core|desktop)
+      echo "El anillo ${ring} es obligatorio y ya está activo."
+      ;;
+    lab)
+      [[ -f "${LIST_DIR}/lab.list" ]] || {
+        echo "No se encontró ${LIST_DIR}/lab.list" >&2
+        exit 1
+      }
+      local -a packages=()
+      mapfile -t packages < <(
+        sed -e 's/#.*//' -e 's/[[:space:]]*$//' "${LIST_DIR}/lab.list" | grep -v '^$' || true
+      )
+      [[ ${#packages[@]} -gt 0 ]] || { echo "La lista lab está vacía." >&2; exit 1; }
+      echo "Instalando ${#packages[@]} paquetes del anillo Lab..."
+      apt-get update
+      apt-get install -y "${packages[@]}"
+      touch "${STATE_DIR}/lab.enabled"
+      echo "Anillo Lab habilitado."
+      ;;
+    apps)
+      command -v flatpak >/dev/null 2>&1 || {
+        echo "Flatpak no está instalado. Instala el anillo desktop primero." >&2
+        exit 1
+      }
+      flatpak remote-add --system --if-not-exists flathub \
+        https://flathub.org/repo/flathub.flatpakrepo
+      touch "${STATE_DIR}/apps.enabled"
+      echo "Anillo Apps habilitado (remoto Flathub)."
+      ;;
+    *)
+      echo "Anillo inválido: ${ring}" >&2
+      usage
+      exit 2
+      ;;
+  esac
+}
+
+cmd_disable() {
+  local ring="${1:-}"
+  require_root
+  case "$ring" in
+    core|desktop)
+      echo "No se puede deshabilitar el anillo obligatorio ${ring}." >&2
+      exit 3
+      ;;
+    lab|apps)
+      rm -f "${STATE_DIR}/${ring}.enabled"
+      echo "Anillo ${ring} deshabilitado."
+      echo "Los paquetes ya instalados no se eliminan."
+      ;;
+    *)
+      echo "Anillo inválido: ${ring}" >&2
+      exit 2
+      ;;
+  esac
+}
+
+case "${1:-list}" in
+  list)    cmd_list ;;
+  enable)  shift; cmd_enable "${1:-}" ;;
+  disable) shift; cmd_disable "${1:-}" ;;
+  -h|--help) usage ;;
+  *) usage; exit 2 ;;
+esac

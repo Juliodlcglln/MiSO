@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Instalar MiSO Desktop
+Name[en]=Install MiSO Desktop
+Comment=Instala MiSO en el disco del equipo
+Comment[en]=Install MiSO to this computer's disk
+Exec=pkexec calamares
+TryExec=calamares
+Icon=calamares
+Terminal=false
+StartupNotify=true
+Categories=Qt;System;
+Keywords=install;instalar;calamares;miso;
+X-AppStream-Ignore=true

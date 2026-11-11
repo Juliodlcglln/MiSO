@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Marca el arranque como correcto. En 1.0 participará del health check A/B.
+
+set -Eeuo pipefail
+
+STATE_DIR="/var/lib/miso"
+mkdir -p "$STATE_DIR"
+
+date -Is > "${STATE_DIR}/boot-ok"
+printf '%s\n' "$(uname -r)" > "${STATE_DIR}/boot-kernel"
+
+# Limpiar la marca de intento si existe (diseño A/B futuro).
+if command -v grub-editenv >/dev/null 2>&1 && [[ -f /boot/grub/grubenv ]]; then
+  grub-editenv /boot/grub/grubenv unset miso_try 2>/dev/null || true
+fi

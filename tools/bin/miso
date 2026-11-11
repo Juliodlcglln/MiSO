@@ -1,0 +1,177 @@
+#!/usr/bin/env bash
+# MiSO Desktop - CLI de usuario.
+# Las operaciones administrativas se delegan a misod mediante pkexec/polkit.
+
+set -Eeuo pipefail
+
+MISO_VERSION="0.1.0"
+MISO_CODENAME="Genesis"
+BROKER="/usr/libexec/miso/misod"
+
+usage() {
+  cat <<EOF
+MiSO Desktop ${MISO_VERSION} «${MISO_CODENAME}»
+
+Uso: miso <comando> [opciones]
+
+Comandos:
+  status                        Estado del sistema, anillos y actualizaciones
+  update [check|apply]          Busca o aplica actualizaciones
+  rollback [list|restore <snap>|boot <snap>]
+                                Gestiona instantáneas de recuperación
+  ring <list|enable|disable> <anillo>
+  app <list|search|install|remove|update>
+  doctor                        Diagnóstico del sistema
+  info                          Información de la versión
+  help                          Esta ayuda
+
+Anillos: core, desktop, lab, apps
+Los comandos administrativos piden autenticación mediante polkit.
+EOF
+}
+
+need_broker() {
+  [[ -x "$BROKER" ]] || {
+    echo "misod no está instalado en $BROKER" >&2
+    exit 1
+  }
+  command -v pkexec >/dev/null 2>&1 || {
+    echo "pkexec no está instalado (paquete pkexec)." >&2
+    exit 1
+  }
+}
+
+show_status() {
+  local pretty kernel rootfs pending=0 flatpak_updates=0 ring
+
+  # shellcheck disable=SC1091
+  . /etc/os-release 2>/dev/null || true
+  pretty="${PRETTY_NAME:-MiSO Desktop}"
+  kernel="$(uname -r)"
+  rootfs="$(findmnt -n -o FSTYPE / 2>/dev/null || echo desconocido)"
+  ring="$(cat /etc/miso/active-ring 2>/dev/null || echo desktop)"
+
+  echo "${pretty}"
+  echo "Kernel:       ${kernel}"
+  echo "Arquitectura: $(uname -m)"
+  echo "Raíz:         ${rootfs}"
+  echo "Anillo:       ${ring}"
+
+  if [[ "$rootfs" == "btrfs" ]]; then
+    local snaps
+    snaps="$(find /.snapshots -maxdepth 1 -mindepth 1 -type d 2>/dev/null | wc -l || true)"
+    echo "Instantáneas: ${snaps}"
+  fi
+
+  if command -v apt-get >/dev/null 2>&1; then
+    pending="$(apt-get -s dist-upgrade 2>/dev/null | grep -c '^Inst ' || true)"
+    pending="${pending:-0}"
+    echo "Actualizaciones apt: ${pending}"
+  fi
+
+  if command -v flatpak >/dev/null 2>&1; then
+    flatpak_updates="$(flatpak remote-ls --updates --columns=application 2>/dev/null | wc -l || true)"
+    flatpak_updates="${flatpak_updates:-0}"
+    echo "Actualizaciones Flatpak: ${flatpak_updates}"
+  fi
+
+  echo
+  if [[ "$pending" -gt 0 ]]; then
+    echo "Ejecuta: miso update apply"
+  else
+    echo "El sistema está al día (según apt)."
+  fi
+}
+
+case "${1:-help}" in
+  status)
+    show_status
+    ;;
+
+  update)
+    need_broker
+    exec pkexec "$BROKER" update "${2:-check}"
+    ;;
+
+  rollback)
+    sub="${2:-list}"
+    if [[ "$sub" == "list" ]]; then
+      exec /usr/bin/miso-updated list
+    fi
+    need_broker
+    exec pkexec "$BROKER" rollback "$sub" "${3:-}"
+    ;;
+
+  ring)
+    sub="${2:-list}"
+    if [[ "$sub" == "list" ]]; then
+      exec /usr/bin/miso-rings list
+    fi
+    need_broker
+    exec pkexec "$BROKER" ring "$sub" "${3:-}"
+    ;;
+
+  app)
+    sub="${2:-list}"
+    shift 2 2>/dev/null || true
+    command -v flatpak >/dev/null 2>&1 || {
+      echo "Flatpak no está instalado." >&2
+      exit 1
+    }
+    case "$sub" in
+      list)
+        flatpak list --app --columns=application,version,branch
+        ;;
+      search)
+        [[ $# -gt 0 ]] || { echo "Uso: miso app search <texto>" >&2; exit 2; }
+        flatpak search "$*"
+        ;;
+      install)
+        [[ $# -eq 1 ]] || { echo "Uso: miso app install <app-id>" >&2; exit 2; }
+        flatpak install --user -y flathub "$1"
+        ;;
+      remove)
+        [[ $# -eq 1 ]] || { echo "Uso: miso app remove <app-id>" >&2; exit 2; }
+        flatpak uninstall --user -y "$1"
+        ;;
+      update)
+        flatpak update --user -y
+        ;;
+      *)
+        echo "Subcomando de app inválido: $sub" >&2
+        exit 2
+        ;;
+    esac
+    ;;
+
+  doctor)
+    if [[ -x /usr/bin/miso-doctor ]]; then
+      exec /usr/bin/miso-doctor
+    else
+      echo "miso-doctor no está instalado." >&2
+      exit 1
+    fi
+    ;;
+
+  info)
+    echo "MiSO Desktop ${MISO_VERSION} «${MISO_CODENAME}»"
+    if [[ -f /etc/miso/release ]]; then
+      # shellcheck disable=SC1091
+      . /etc/miso/release
+      echo "Base:    ${MISO_BASE:-desconocida}"
+      echo "Perfil:  ${MISO_PROFILE:-desconocido}"
+      echo "Canal:   ${MISO_CHANNEL:-desconocido}"
+    fi
+    ;;
+
+  help|-h|--help)
+    usage
+    ;;
+
+  *)
+    echo "Comando desconocido: $1" >&2
+    echo
+    usage
+    exit 2
+    ;;
+esac

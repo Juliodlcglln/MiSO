@@ -1,0 +1,170 @@
+#!/usr/bin/env bash
+# MiSO Desktop - diagnóstico del sistema.
+# Códigos de salida: 0 = OK, 1 = fallo, 2 = advertencias.
+
+set -u
+
+PASS=0
+WARN=0
+FAIL=0
+
+ok()   { printf '  [ OK ] %s\n' "$*"; PASS=$((PASS + 1)); }
+warn() { printf '  [WARN] %s\n' "$*"; WARN=$((WARN + 1)); }
+fail() { printf '  [FAIL] %s\n' "$*"; FAIL=$((FAIL + 1)); }
+
+section() { printf '\n%s\n' "$*"; }
+
+printf 'MiSO Doctor\n'
+printf '===========\n'
+
+section "Identidad"
+if [[ -r /etc/os-release ]] && grep -q '^ID=miso$' /etc/os-release; then
+  ok "MiSO Desktop detectado"
+else
+  fail "No se detecta ID=miso en /etc/os-release"
+fi
+printf '  Versión:  %s\n' "$(grep -m1 '^VERSION=' /etc/os-release 2>/dev/null | cut -d= -f2- | tr -d '"')"
+printf '  Kernel:   %s\n' "$(uname -r)"
+printf '  Arch:     %s\n' "$(uname -m)"
+
+section "Firmware y arranque"
+if [[ -d /sys/firmware/efi ]]; then
+  ok "Arranque UEFI"
+  if command -v mokutil >/dev/null 2>&1; then
+    sb="$(mokutil --sb-state 2>/dev/null || true)"
+    if grep -qi 'enabled' <<<"$sb"; then
+      warn "Secure Boot activo; la ISO 0.1.0 no está firmada por MiSO"
+    else
+      ok "Secure Boot desactivado"
+    fi
+  else
+    warn "mokutil no está instalado; no se puede comprobar Secure Boot"
+  fi
+else
+  warn "Arranque BIOS/Legacy"
+fi
+
+section "Almacenamiento"
+rootfs="$(findmnt -n -o FSTYPE / 2>/dev/null || echo desconocido)"
+printf '  Raíz:     %s\n' "$rootfs"
+if [[ "$rootfs" == "btrfs" ]]; then
+  ok "btrfs disponible para instantáneas"
+  snaps="$(find /.snapshots -maxdepth 1 -mindepth 1 -type d 2>/dev/null | wc -l || true)"
+  if [[ "$snaps" -gt 0 ]]; then
+    ok "${snaps} instantánea(s) disponibles"
+  else
+    warn "No hay instantáneas todavía"
+  fi
+else
+  warn "La raíz no es btrfs; el rollback automático no está disponible"
+fi
+
+avail_kb="$(df -P / 2>/dev/null | awk 'NR==2 {print $4}')"
+if [[ -n "${avail_kb:-}" ]]; then
+  avail_gb="$(awk -v kb="$avail_kb" 'BEGIN {printf "%.1f", kb/1024/1024}')"
+  printf '  Libre:    %s GB\n' "$avail_gb"
+  if awk -v kb="$avail_kb" 'BEGIN {exit !(kb < 5*1024*1024)}'; then
+    warn "Menos de 5 GB libres en /"
+  else
+    ok "Espacio libre suficiente"
+  fi
+fi
+
+section "Seguridad"
+aa_cmd=""
+if command -v aa-status >/dev/null 2>&1; then
+  aa_cmd="$(command -v aa-status)"
+elif [[ -x /usr/sbin/aa-status ]]; then
+  aa_cmd="/usr/sbin/aa-status"
+fi
+
+if [[ -n "$aa_cmd" ]]; then
+  if "$aa_cmd" --enabled >/dev/null 2>&1; then
+    ok "AppArmor habilitado"
+  else
+    warn "AppArmor instalado pero no habilitado"
+  fi
+else
+  warn "AppArmor no está instalado"
+fi
+
+if systemctl is-active --quiet nftables 2>/dev/null; then
+  ok "Firewall nftables activo"
+elif command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -qi '^Status: active'; then
+  ok "Firewall ufw activo"
+else
+  warn "No se detecta firewall activo"
+fi
+
+if id root >/dev/null 2>&1; then
+  root_shell="$(getent passwd root | cut -d: -f7)"
+  root_state="$(passwd -S root 2>/dev/null | awk '{print $2}')"
+  if [[ "$root_shell" == */nologin || "$root_shell" == */false || "$root_state" == "L" ]]; then
+    ok "Login de root deshabilitado"
+  else
+    warn "root tiene shell de login y contraseña activa (${root_shell})"
+  fi
+fi
+
+section "Aplicaciones"
+if command -v flatpak >/dev/null 2>&1; then
+  if flatpak remotes --columns=name 2>/dev/null | grep -qx flathub; then
+    ok "Flatpak con remoto Flathub"
+  else
+    warn "Flatpak instalado sin remoto Flathub"
+  fi
+  apps="$(flatpak list --app --columns=application 2>/dev/null | wc -l || true)"
+  printf '  Apps Flatpak: %s\n' "$apps"
+else
+  warn "Flatpak no está instalado"
+fi
+
+section "Actualizaciones"
+if command -v apt-get >/dev/null 2>&1; then
+  pending="$(apt-get -s dist-upgrade 2>/dev/null | grep -c '^Inst ' || true)"
+  if [[ "$pending" -eq 0 ]]; then
+    ok "Sin actualizaciones pendientes"
+  else
+    warn "${pending} actualización(es) pendiente(s)"
+  fi
+else
+  fail "apt-get no está disponible"
+fi
+
+section "Salud del sistema"
+failed_units="$(systemctl --failed --no-legend 2>/dev/null | wc -l || true)"
+if [[ "$failed_units" -eq 0 ]]; then
+  ok "Sin unidades systemd fallidas"
+else
+  warn "${failed_units} unidad(es) fallida(s):"
+  systemctl --failed --no-legend 2>/dev/null | sed 's/^/    /'
+fi
+
+if command -v journalctl >/dev/null 2>&1; then
+  errors="$(journalctl -p 3 -b --no-pager -q 2>/dev/null \
+    | grep -Ev '^-- No entries --$' | grep -c . || true)"
+  errors="${errors:-0}"
+  if [[ "$errors" -eq 0 ]]; then
+    ok "Sin errores en el journal del arranque"
+  else
+    warn "${errors} línea(s) de error en el journal (revisa: journalctl -p 3 -b)"
+  fi
+fi
+
+section "Hardware"
+if command -v lspci >/dev/null 2>&1; then
+  gpu="$(lspci 2>/dev/null | grep -Ei 'vga|3d|display' | head -n 1 | cut -d: -f3- | sed 's/^ //')"
+  [[ -n "$gpu" ]] && printf '  GPU:      %s\n' "$gpu"
+fi
+if command -v free >/dev/null 2>&1; then
+  printf '  Memoria:  %s\n' "$(free -h | awk 'NR==2 {print $3 " usados de " $2}')"
+fi
+
+printf '\nResumen: %d OK, %d advertencias, %d fallos\n' "$PASS" "$WARN" "$FAIL"
+
+if [[ $FAIL -gt 0 ]]; then
+  exit 1
+elif [[ $WARN -gt 0 ]]; then
+  exit 2
+fi
+exit 0

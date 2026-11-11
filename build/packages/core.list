@@ -1,0 +1,77 @@
+# MiSO Desktop - Anillo Core
+# Base del sistema. No depende de Plasma.
+
+# Kernel y firmware
+linux-image-amd64
+firmware-linux-free
+firmware-iwlwifi
+firmware-realtek
+firmware-atheros
+firmware-brcm80211
+firmware-intel-sound
+firmware-sof-signed
+amd64-microcode
+intel-microcode
+
+# Live
+live-boot
+live-config
+live-config-systemd
+
+# Sistema
+systemd
+systemd-sysv
+dbus
+polkitd
+pkexec
+sudo
+locales
+console-setup
+keyboard-configuration
+tzdata
+apparmor
+apparmor-profiles
+apparmor-utils
+
+# Red
+network-manager
+wpasupplicant
+rfkill
+iproute2
+iputils-ping
+dnsutils
+curl
+wget
+openssh-client
+
+# Almacenamiento y arranque
+btrfs-progs
+e2fsprogs
+dosfstools
+mtools
+parted
+gdisk
+rsync
+squashfs-tools
+grub-common
+grub2-common
+os-prober
+
+# Herramientas
+bash-completion
+nano
+less
+file
+tree
+htop
+lsof
+strace
+usbutils
+pciutils
+lm-sensors
+zstd
+xz-utils
+nftables
+libcap2-bin
+ca-certificates
+gnupg

@@ -1,0 +1,46 @@
+# Definición de anillos de MiSO Desktop
+# Copiado a /etc/miso/rings.yaml durante el build.
+
+version: 1
+product: MiSO Desktop
+
+rings:
+  core:
+    mandatory: true
+    cadence: quarterly
+    risk: low
+    reboot_required: true
+    description: "Kernel, base Debian, systemd, drivers y seguridad"
+    delivery: "apt + instantánea"
+
+  desktop:
+    mandatory: true
+    cadence: monthly
+    risk: medium
+    reboot_required: false
+    description: "KDE Plasma 6, PJD Shell, SDDM y portales"
+    delivery: "apt + instantánea"
+
+  lab:
+    mandatory: false
+    cadence: semiannual
+    risk: medium
+    reboot_required: false
+    description: "Toolchain, ciencia, ofimática y virtualización"
+    delivery: "meta-paquetes"
+
+  apps:
+    mandatory: false
+    cadence: continuous
+    risk: isolated
+    reboot_required: false
+    description: "Aplicaciones Flatpak de usuario"
+    delivery: "Flathub / MiSO Apps"
+
+channels:
+  stable:
+    description: "Recomendado para laboratorio"
+  beta:
+    description: "Pruebas de fase"
+  dev:
+    description: "Builds del equipo"

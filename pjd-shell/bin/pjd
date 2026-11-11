@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# pjd - gestiona la capa de escritorio PJD de MiSO.
+
+set -Eeuo pipefail
+
+usage() {
+  cat <<EOF
+PJD Shell 0.1.0
+
+Uso: pjd <comando>
+
+Comandos:
+  status   Muestra el look-and-feel activo
+  apply    Aplica PJD Shell al usuario actual
+  layout   Explica cómo restaurar el layout del panel
+EOF
+}
+
+case "${1:-status}" in
+  status)
+    echo "PJD Shell 0.1.0"
+    if command -v kreadconfig6 >/dev/null 2>&1; then
+      current="$(kreadconfig6 --file kdeglobals --group KDE --key LookAndFeelPackage 2>/dev/null || true)"
+      echo "Look-and-feel: ${current:-desconocido}"
+    else
+      echo "kreadconfig6 no está disponible."
+    fi
+    ;;
+
+  apply)
+    if ! command -v lookandfeeltool >/dev/null 2>&1; then
+      echo "lookandfeeltool no está disponible (¿Plasma instalado?)." >&2
+      exit 1
+    fi
+    lookandfeeltool -a org.miso.pjd.desktop
+    echo "PJD aplicado. Cierra sesión y vuelve a entrar para ver el layout completo."
+    ;;
+
+  layout)
+    cat <<EOF
+Para restaurar el layout del panel:
+  1. Cierra la sesión.
+  2. Elimina ~/.config/plasma-org.kde.plasma.desktop-appletsrc.
+  3. Vuelve a entrar: Plasma recreará el layout desde PJD.
+
+También puedes usar: pjd apply
+EOF
+    ;;
+
+  help|-h|--help)
+    usage
+    ;;
+
+  *)
+    usage
+    exit 2
+    ;;
+esac

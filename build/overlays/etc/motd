@@ -1,0 +1,13 @@
+
+  MiSO Desktop 0.1.0 «Genesis»
+  -----------------------------
+  Base: Debian 13 (Trixie) + kernel Linux
+
+  Comandos útiles:
+    miso status        Estado del sistema y actualizaciones
+    miso doctor        Diagnóstico completo
+    miso ring list     Anillos disponibles
+    pkexec calamares  Instalar MiSO Desktop (perfil desktop)
+
+  Documentación: /usr/share/doc/miso-desktop/
+

@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# MiSO Desktop - bienvenida para la sesión live.
+
+set -u
+
+# shellcheck disable=SC1091
+. /etc/os-release 2>/dev/null || true
+
+cat <<EOF
+
+  ┌──────────────────────────────────────────────────────────┐
+  │                                                          │
+  │   MiSO Desktop ${VERSION:-0.1.0} «${VERSION_CODENAME:-Genesis}»                   │
+  │   Un escritorio Linux para el laboratorio                │
+  │                                                          │
+  └──────────────────────────────────────────────────────────┘
+
+  Base:      Debian 13 Trixie + KDE Plasma 6
+  Sesión:    usuario "live" (contraseña "live")
+  Estado:    sistema live; los cambios no persisten
+
+  Primeros pasos
+  --------------
+  1. Instalar MiSO Desktop:
+       icono "Instalar MiSO Desktop" del escritorio
+       o ejecuta: pkexec calamares
+
+  2. Comprobar el sistema:
+       miso doctor
+
+  3. Ver actualizaciones:
+       miso update check
+
+  4. Ver anillos disponibles:
+       miso ring list
+
+  Documentación: /usr/share/doc/miso-desktop/ (si está instalada)
+  Soporte:       https://miso.local/soporte
+
+EOF
+
+if command -v nm-online >/dev/null 2>&1; then
+  if nm-online -q -t 5 >/dev/null 2>&1; then
+    echo "  Red: conectada"
+  else
+    echo "  Red: sin conexión (revisa NetworkManager)"
+  fi
+fi
+
+echo
+read -r -p "  Pulsa Enter para cerrar esta ventana..." _ || true

@@ -1,0 +1,33 @@
+# Artefactos de build
+/out/
+/work/
+*.iso
+*.iso.sha256
+*.squashfs
+*.img
+
+# Rootfs y temporales
+/rootfs/
+/chroot/
+/.snapshots/
+
+# Empaquetado
+*.deb
+*.dsc
+*.changes
+*.buildinfo
+/debian/.debhelper/
+/debian/tmp/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Editores y sistema
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini

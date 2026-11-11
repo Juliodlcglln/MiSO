@@ -1,0 +1,14 @@
+PRETTY_NAME="MiSO Desktop 0.1.0 (Genesis)"
+NAME="MiSO Desktop"
+VERSION_ID="0.1"
+VERSION="0.1.0 (Genesis)"
+VERSION_CODENAME=genesis
+ID=miso
+ID_LIKE=debian
+ANSI_COLOR="0;36"
+HOME_URL="https://miso.local/"
+SUPPORT_URL="https://miso.local/soporte"
+BUG_REPORT_URL="https://miso.local/errores"
+PRIVACY_POLICY_URL="https://miso.local/privacidad"
+LOGO=miso-logo
+DEBIAN_CODENAME=trixie

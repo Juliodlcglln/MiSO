@@ -1,0 +1,221 @@
+#!/usr/bin/env bash
+# MiSO Desktop - actualizador.
+# 0.1.0: instantánea btrfs + apt dist-upgrade.
+# La actualización A/B y el rollback automático llegan en la Fase 4.
+
+set -Eeuo pipefail
+
+STATE_DIR="/var/lib/miso"
+SNAP_DIR="/.snapshots"
+LOG_DIR="/var/log/miso"
+LOG_FILE="${LOG_DIR}/updates.log"
+LOCK_FILE="/var/lock/miso-update.lock"
+
+require_root() {
+  [[ ${EUID} -eq 0 ]] || { echo "Esta operación requiere root (usa miso update ...)." >&2; exit 1; }
+}
+
+ensure_dirs() {
+  mkdir -p "$STATE_DIR" "$LOG_DIR"
+}
+
+log() {
+  local msg
+  msg="$(date -Is) $*"
+  printf '%s\n' "$msg" | tee -a "$LOG_FILE"
+}
+
+die() {
+  log "ERROR: $*"
+  exit 1
+}
+
+is_btrfs() {
+  findmnt -n -o FSTYPE / 2>/dev/null | grep -qx btrfs
+}
+
+# Solo se puede instantanear si / es un subvolumen (no el nivel superior).
+can_snapshot() {
+  is_btrfs || return 1
+  btrfs subvolume show / >/dev/null 2>&1
+}
+
+take_snapshot() {
+  can_snapshot || return 1
+  mkdir -p "$SNAP_DIR"
+  # /.snapshots debe ser subvolumen para no incluirse en sus propias
+  # instantáneas.
+  if ! btrfs subvolume show "$SNAP_DIR" >/dev/null 2>&1; then
+    if [[ -z "$(ls -A "$SNAP_DIR" 2>/dev/null)" ]]; then
+      btrfs subvolume create "$SNAP_DIR" >/dev/null 2>&1 || true
+    fi
+  fi
+  local name
+  name="rollback-$(date +%Y%m%d-%H%M%S)"
+  btrfs subvolume snapshot -r / "${SNAP_DIR}/${name}" >/dev/null
+  printf '%s\n' "$name"
+}
+
+cmd_check() {
+  require_root
+  ensure_dirs
+  log "Comprobando actualizaciones"
+  apt-get update
+  apt-get -s dist-upgrade | sed -n '1,160p'
+}
+
+cmd_apply() {
+  require_root
+  ensure_dirs
+  local force=0
+  [[ "${1:-}" == "--force" ]] && force=1
+
+  exec 9>"$LOCK_FILE"
+  flock -n 9 || die "Ya hay una actualización en curso."
+
+  local snapshot=""
+  if can_snapshot; then
+    snapshot="$(take_snapshot)" || die "No se pudo crear la instantánea."
+    log "Instantánea creada: ${SNAP_DIR}/${snapshot}"
+  elif is_btrfs; then
+    if [[ $force -eq 1 ]]; then
+      log "ADVERTENCIA: la raíz btrfs no es un subvolumen; se actualiza sin instantánea (--force)."
+    else
+      die "La raíz btrfs es el subvolumen superior; reinstala con subvolúmenes (@) para poder instantanear. Usa --force para actualizar sin instantánea."
+    fi
+  elif [[ $force -eq 1 ]]; then
+    log "ADVERTENCIA: la raíz no es btrfs; se actualiza sin instantánea (--force)."
+  else
+    die "La raíz no es btrfs. Usa 'miso-updated apply --force' para actualizar sin instantánea."
+  fi
+
+  log "Iniciando apt dist-upgrade"
+  if ! DEBIAN_FRONTEND=noninteractive apt-get -y \
+      -o Dpkg::Options::=--force-confold \
+      -o Dpkg::Options::=--force-confdef \
+      dist-upgrade; then
+    log "La actualización falló."
+    if [[ -n "$snapshot" ]]; then
+      log "La instantánea ${SNAP_DIR}/${snapshot} sigue disponible para recuperación."
+    fi
+    exit 1
+  fi
+
+  date -Is > "${STATE_DIR}/last-update"
+  if [[ -n "$snapshot" ]]; then
+    printf '%s\n' "$snapshot" > "${STATE_DIR}/last-snapshot"
+    log "Actualización completada. Instantánea: ${snapshot}"
+  else
+    log "Actualización completada sin instantánea."
+  fi
+}
+
+cmd_list() {
+  if [[ ! -d "$SNAP_DIR" ]]; then
+    echo "No hay instantáneas (${SNAP_DIR} no existe)."
+    return 0
+  fi
+  local found=0
+  while IFS= read -r snap; do
+    [[ -n "$snap" ]] || continue
+    found=1
+    printf '%s\n' "$(basename "$snap")"
+  done < <(find "$SNAP_DIR" -maxdepth 1 -mindepth 1 -type d | sort)
+  [[ $found -eq 1 ]] || echo "No hay instantáneas."
+}
+
+cmd_restore() {
+  require_root
+  ensure_dirs
+  local snap="${1:-}" yes=0
+  [[ "${2:-}" == "--yes" ]] && yes=1
+  [[ -n "$snap" ]] || { echo "Uso: miso-updated restore <instantánea> [--yes]" >&2; exit 2; }
+  [[ "$snap" =~ ^[A-Za-z0-9._-]+$ ]] || die "Nombre de instantánea inválido."
+  is_btrfs || die "La raíz no es btrfs."
+  local src="${SNAP_DIR}/${snap}"
+  [[ -d "$src" ]] || die "No existe la instantánea ${snap}."
+  btrfs subvolume show "$src" >/dev/null 2>&1 || die "${snap} no es una instantánea btrfs."
+
+  if [[ $yes -eq 0 ]]; then
+    echo "Se restaurará el sistema desde: ${snap}"
+    echo "Se conservan /home y las instantáneas. Reinicia al terminar."
+    read -r -p "¿Continuar? [s/N] " ans
+    [[ "$ans" =~ ^[sSyY]$ ]] || { echo "Cancelado."; exit 1; }
+  fi
+
+  local safety=""
+  safety="$(take_snapshot 2>/dev/null || true)"
+  [[ -n "$safety" ]] && log "Instantánea de seguridad: ${SNAP_DIR}/${safety}"
+
+  local id root_src
+  id="$(btrfs subvolume show "$src" | sed -n 's/^[[:space:]]*Subvolume ID:[[:space:]]*//p' | head -1)"
+  [[ -n "$id" ]] || die "No se pudo obtener el ID de la instantánea."
+  # findmnt devuelve "/dev/vda3[/@]"; el sufijo de subvolumen no vale para mount.
+  root_src="$(findmnt -n -o SOURCE /)"
+  root_src="${root_src%%\[*}"
+
+  local mnt="/mnt/miso-restore"
+  mkdir -p "$mnt"
+  mount -o ro,subvolid="${id}" "$root_src" "$mnt" || die "No se pudo montar la instantánea."
+
+  log "Restaurando desde ${snap} (subvolid ${id})"
+  if ! rsync -aHAX --delete --numeric-ids \
+      --exclude='/proc/*' --exclude='/sys/*' --exclude='/dev/*' \
+      --exclude='/run/*' --exclude='/tmp/*' --exclude='/mnt/*' \
+      --exclude='/media/*' --exclude='/lost+found' \
+      --exclude='/home/*' --exclude='/.snapshots/*' --exclude='/boot/efi/*' \
+      "${mnt}/" /; then
+    umount "$mnt"
+    die "La restauración falló. Instantánea de seguridad: ${safety}"
+  fi
+  umount "$mnt"
+
+  date -Is > "${STATE_DIR}/last-rollback"
+  log "Restauración completada desde ${snap}. Reinicia el equipo."
+  echo "Restauración completada. Reinicia el equipo."
+}
+
+cmd_status() {
+  echo "MiSO updater"
+  echo "Raíz btrfs: $([[ $(findmnt -n -o FSTYPE / 2>/dev/null) == btrfs ]] && echo sí || echo no)"
+  if [[ -f "${STATE_DIR}/last-update" ]]; then
+    echo "Última actualización: $(cat "${STATE_DIR}/last-update")"
+  else
+    echo "Última actualización: nunca"
+  fi
+  if [[ -f "${STATE_DIR}/last-snapshot" ]]; then
+    echo "Última instantánea:   $(cat "${STATE_DIR}/last-snapshot")"
+  fi
+  echo "Instantáneas disponibles:"
+  cmd_list | sed 's/^/  /'
+}
+
+cmd_boot() {
+  require_root
+  local snap="${1:-}"
+  [[ -n "$snap" ]] || { echo "Uso: miso-updated boot <instantánea>" >&2; exit 2; }
+  cat <<EOF
+Instantánea solicitada: ${snap}
+Ruta: ${SNAP_DIR}/${snap}
+
+Para volver al estado de esa instantánea sin arrancar otro medio:
+  sudo miso rollback restore ${snap}
+
+El arranque directo desde una instantánea (entradas GRUB) y el rollback
+automático A/B llegan en la Fase 4.
+EOF
+  exit 3
+}
+
+case "${1:-status}" in
+  check)   cmd_check ;;
+  apply)   shift; cmd_apply "$@" ;;
+  list)    cmd_list ;;
+  status)  cmd_status ;;
+  restore) shift; cmd_restore "$@" ;;
+  boot)    shift; cmd_boot "$@" ;;
+  *)
+    echo "Uso: miso-updated <check|apply [--force]|list|status|restore <snap> [--yes]|boot <snap>>" >&2
+    exit 2
+    ;;
+esac

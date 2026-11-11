@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Configuración de primer arranque de MiSO Desktop.
+
+set -Eeuo pipefail
+
+STATE_DIR="/var/lib/miso"
+mkdir -p "$STATE_DIR"
+
+if command -v flatpak >/dev/null 2>&1; then
+  flatpak remote-add --system --if-not-exists flathub \
+    https://flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
+fi
+
+# Crear el directorio de instantáneas si la raíz es btrfs.
+if findmnt -n -o FSTYPE / 2>/dev/null | grep -qx btrfs; then
+  mkdir -p /.snapshots
+fi
+
+touch "${STATE_DIR}/firstboot-done"

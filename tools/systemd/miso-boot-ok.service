@@ -1,0 +1,11 @@
+[Unit]
+Description=MiSO Desktop - marcar arranque correcto
+After=systemd-user-sessions.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/miso/miso-boot-ok
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
