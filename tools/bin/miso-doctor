@@ -14,18 +14,23 @@ fail() { printf '  [FAIL] %s\n' "$*"; FAIL=$((FAIL + 1)); }
 
 section() { printf '\n%s\n' "$*"; }
 
-printf 'MiSO Doctor\n'
-printf '===========\n'
+printf 'WanukuOS Doctor\n'
+printf '===============\n'
 
 section "Identidad"
-if [[ -r /etc/os-release ]] && grep -q '^ID=miso$' /etc/os-release; then
-  ok "MiSO Desktop detectado"
+if [[ -r /etc/os-release ]] && grep -qE '^ID=(wanuku|miso)$' /etc/os-release; then
+  ok "WanukuOS detectado"
 else
-  fail "No se detecta ID=miso en /etc/os-release"
+  fail "No se detecta WanukuOS en /etc/os-release"
 fi
 printf '  Versión:  %s\n' "$(grep -m1 '^VERSION=' /etc/os-release 2>/dev/null | cut -d= -f2- | tr -d '"')"
 printf '  Kernel:   %s\n' "$(uname -r)"
 printf '  Arch:     %s\n' "$(uname -m)"
+if uname -r | grep -q -- '-miso'; then
+  ok "Kernel MiSO (-miso) activo"
+else
+  warn "Kernel Debian activo (sin sufijo -miso)"
+fi
 
 section "Firmware y arranque"
 if [[ -d /sys/firmware/efi ]]; then
@@ -132,6 +137,17 @@ else
 fi
 
 section "Salud del sistema"
+if [[ -f /var/lib/miso/boot-health ]]; then
+  health="$(cat /var/lib/miso/boot-health 2>/dev/null || true)"
+  if [[ "$health" == "ok" ]]; then
+    ok "Último arranque marcado como correcto"
+  else
+    warn "Último arranque con incidencias: ${health}"
+  fi
+fi
+if [[ -f /var/lib/miso/last-rollback ]]; then
+  printf '  Último rollback: %s\n' "$(cat /var/lib/miso/last-rollback 2>/dev/null || true)"
+fi
 failed_units="$(systemctl --failed --no-legend 2>/dev/null | wc -l || true)"
 if [[ "$failed_units" -eq 0 ]]; then
   ok "Sin unidades systemd fallidas"

@@ -14,8 +14,9 @@ cuatro capas propias: un modelo de **anillos** de entrega, un sistema de
 **instalador/shell con identidad MiSO**.
 
 La decisión central es dejar de escribir un kernel desde cero (MiSO Core) y usar el
-kernel Linux como cimiento. MiSO no reescribe el kernel: **lo compila desde el código
-fuente de Linux con una configuración propia, versionada y auditable** (`6.12.x-miso`).
+kernel Linux como cimiento. MiSO no reescribe el kernel: **puede compilarlo desde el
+código fuente de Linux con una configuración propia, versionada y auditable**
+(`6.12.x-miso`); la ISO usa el kernel de Debian si no se compila el kernel MiSO.
 El valor del proyecto no está en reimplementar drivers,
 scheduler o memoria virtual, sino en **integrar, asegurar y dar identidad** a un
 escritorio que funcione en el laboratorio y que se pueda instalar, actualizar y
@@ -208,17 +209,21 @@ Reglas:
 ### 8.1 0.1.0
 
 - `miso update check` muestra paquetes pendientes.
-- `miso update apply` crea una instantánea btrfs de solo lectura y ejecuta
-  `apt dist-upgrade`.
+- `miso update apply` actualiza índices, crea una instantánea btrfs de solo lectura y
+  ejecuta `apt dist-upgrade`; al terminar aplica retención a las instantáneas antiguas.
 - Si la actualización falla, la instantánea queda disponible para recuperación manual.
 - `miso rollback list` lista instantáneas.
 - `miso rollback restore <snap>` restaura los archivos del sistema desde una
   instantánea, conservando `/home` y `/.snapshots`, y deja una instantánea de
   seguridad del estado anterior.
+- `miso rollback boot <snap>` crea un clon escribible, añade una entrada GRUB y deja
+  el próximo arranque en esa instantánea.
+- `miso-boot-ok` comprueba raíz, systemd y SDDM; tras dos fallos prepara el arranque
+  desde la última instantánea.
 
-Limitación conocida: en 0.1.0 todavía no se genera automáticamente una entrada de
-arranque para cada instantánea ni un rollback automático. Eso llega con el diseño
-A/B de una fase posterior.
+Limitación conocida: el **rollback automático A/B** (escribir en el slot inactivo y
+volver solo si el nuevo no arranca) sigue siendo trabajo de una fase posterior. La
+recuperación actual es por instantánea + GRUB, no por imagen A/B.
 
 ### 8.2 Meta 1.0
 
@@ -291,11 +296,11 @@ vía natural, pero no bloquea el producto.
 
 | Versión | Alcance |
 |---|---|
-| **0.1.0 «Génesis»** | ISO live core/desktop, Plasma 6, PJD básico, Calamares, CLI y broker |
-| **0.2.0** | Instalación verificada, primer arranque, branding completo, pruebas UEFI/BIOS |
-| **0.3.0** | Anillos Lab/Apps, Flatpak, `miso doctor` completo |
-| **0.4.0** | Actualizaciones con instantánea y rollback manual guiado |
-| **1.0.0** | A/B atómico, Secure Boot, hardening, validación en hardware de laboratorio |
+| **0.1.0 «Génesis»** | ISO live core/desktop, Plasma 6, PJD, Calamares, instalación, CLI/broker, instantáneas y rollback manual |
+| **0.2.0** | Arranque desde instantánea, retención, health check y rollback automático |
+| **0.3.0** | Anillos Lab/Apps con repo firmado, Flatpak curado y pinning |
+| **0.4.0** | `misod` como servicio D-Bus persistente y actualizaciones por anillo |
+| **1.0.0** | A/B atómico, Secure Boot, hardening y validación en hardware de laboratorio |
 
 ---
 
@@ -360,16 +365,19 @@ Un release se considera aceptable cuando:
 - Post-instalación real: usuario administrador, `live` eliminado, root sin shell.
 - GRUB BIOS y UEFI; el sistema instalado arranca sin la ISO.
 
-**Hecho en Fase 4 (rollback manual):**
+**Hecho en Fase 4 (rollback manual y arranque desde instantánea):**
 
-- Instantáneas de solo lectura antes de actualizar.
+- Instantáneas de solo lectura antes de actualizar, con `apt-get update` previo.
 - `miso rollback restore` restaura el sistema y conserva `/home`.
-- Reinicio verificado después de restaurar.
+- `miso rollback boot` crea un clon escribible y una entrada GRUB.
+- Retención configurable (`MISO_KEEP_SNAPSHOTS`, por defecto 10) y comprobación de
+  espacio libre antes de instantanear.
+- `miso-boot-ok` comprueba el arranque y prepara la recuperación tras fallos repetidos.
 
 **Siguiente:**
 
 1. Recorrer la interfaz gráfica de Calamares de principio a fin.
-2. Añadir entradas de arranque para instantáneas y rollback automático.
+2. Implementar el rollback automático A/B con `grubenv` y slot inactivo.
 3. Probar LUKS y audio en hardware real.
 4. Validar en dos modelos de PC de laboratorio.
 

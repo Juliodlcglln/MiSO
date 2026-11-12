@@ -1,7 +1,7 @@
 [General]
-# Branding MiSO sobre el tema Breeze de SDDM.
+# Branding WanukuOS sobre el tema Breeze de SDDM.
 # SDDM fusiona theme.conf.user encima de theme.conf.
-background=/usr/share/wallpapers/miso-default.png
+background=/usr/share/wallpapers/wanuku-default.png
 showlogo=shown
-logo=/usr/share/pixmaps/miso-logo.png
-color=#0f2a3d
+logo=/usr/share/pixmaps/wanuku-logo.png
+color=#121824

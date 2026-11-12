@@ -5,9 +5,14 @@ construida sobre **Debian 13 «Trixie»** y **KDE Plasma 6**, con capas propias 
 integración, seguridad, instalación, actualización e identidad visual.
 
 > **Versión:** 0.1.0 «Génesis»
-> **Estado:** funcional en QEMU — ISO `core` y `desktop` verificadas en BIOS/UEFI,
-> instalación en disco con btrfs y rollback manual probado de punta a punta.
-> **Base:** Debian 13 Trixie · Linux 6.12 (kernel MiSO `-miso`) · KDE Plasma 6 · Wayland (con X11 disponible).
+> **Estado:** Fase 0–4 completadas. Las ISOs `core` y `desktop` están construidas,
+> descargadas en `out/` y verificadas en QEMU BIOS y UEFI (smoke tests con 0 fallos).
+> El kernel `-miso` es opcional y se compila con `make kernel`.
+> **Base:** Debian 13 Trixie · Linux 6.12 · KDE Plasma 6 · Wayland (con X11 disponible).
+>
+> **¿Vas a presentar o probar el sistema?** Consulta
+> [docs/10-manual-de-continuacion.md](docs/10-manual-de-continuacion.md) para la guía
+> rápida paso a paso de demostración en vivo.
 
 ---
 
@@ -78,11 +83,14 @@ MiSO Desktop/
 ## Inicio rápido (Windows + WSL2)
 
 Requisitos: Windows 11, WSL2 con Ubuntu 24.04 o superior, 25 GB libres, 8 GB de RAM
-y conexión a Internet.
+y conexión a Internet. En el equipo actual no hay una distribución WSL utilizable;
+por eso la ISO se construye en una máquina virtual Debian 13/QEMU. Consulta el
+[manual de continuación](docs/10-manual-de-continuacion.md) para ver cómo está
+levantada esa MV y cómo copiar el resultado.
 
 ```powershell
 wsl -d Ubuntu
-cd "/mnt/c/Users/luis_/OneDrive/Desktop/Julio/MiSO/MiSO Desktop"
+cd "/mnt/c/Users/santos/OneDrive/Escritorio/MiSO"
 sudo bash build/install-host-deps.sh
 sudo bash build/build-iso.sh --profile core
 ```
@@ -109,6 +117,32 @@ Para UEFI:
 powershell -ExecutionPolicy Bypass -File scripts/run-qemu.ps1 `
   -Iso "out\miso-desktop-0.1.0-core-amd64.iso" -Uefi
 ```
+
+## Crear la USB booteable
+
+La ISO es **híbrida**: arranca por BIOS y por UEFI. La ISO `desktop` es el
+objetivo de 0.1.0; si aún no se ha construido o verificado, la ISO `core`
+(`out\miso-desktop-0.1.0-core-amd64.iso`) sirve como respaldo de arranque.
+
+Para grabarla desde Windows:
+
+1. Conecta la USB (se borrará por completo).
+2. Abre [Rufus](https://rufus.ie/) como administrador.
+3. Selecciona la ISO `out\miso-desktop-0.1.0-desktop-amd64.iso`.
+4. Esquema de partición **GPT** y sistema destino **UEFI** (o **MBR/BIOS** si el
+   equipo es antiguo).
+5. Inicia y espera a que termine; no desconectes la USB.
+
+También puedes usar Ventoy (copiar la ISO a la partición de datos) o, desde Linux:
+
+```bash
+sudo dd if=out/miso-desktop-0.1.0-desktop-amd64.iso of=/dev/sdX bs=8M status=progress oflag=sync
+```
+
+> `scripts/make-usb.ps1` automatiza el modo `dd` en Windows, pero requiere `dd`
+> (MSYS2/Git Bash) y privilegios de administrador. En el host actual no hay admin
+> ni USB conectado, así que este paso lo debe ejecutar el usuario final. Rufus es
+> la opción recomendada. Desactiva Secure Boot si la ISO no está firmada.
 
 ## Documentación
 

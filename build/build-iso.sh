@@ -214,6 +214,8 @@ stage_identity() {
     "${SCRIPT_DIR}/overlays/" "${ROOTFS}/"
 
   # Herramientas propias
+  install -Dm755 "${PROJECT_ROOT}/tools/bin/wanuku"       "${ROOTFS}/usr/bin/wanuku" 2>/dev/null || true
+  install -Dm755 "${PROJECT_ROOT}/tools/bin/wanuku-doctor" "${ROOTFS}/usr/bin/wanuku-doctor" 2>/dev/null || true
   install -Dm755 "${PROJECT_ROOT}/tools/bin/miso"         "${ROOTFS}/usr/bin/miso"
   install -Dm755 "${PROJECT_ROOT}/tools/bin/miso-updated" "${ROOTFS}/usr/bin/miso-updated"
   install -Dm755 "${PROJECT_ROOT}/tools/bin/miso-rings"   "${ROOTFS}/usr/bin/miso-rings"
@@ -343,9 +345,14 @@ EOF
     "$MISO_LIVE_USER" 2>/dev/null || true
 
   # Acceso directo al instalador en el escritorio de la sesión live.
+  chroot_run "$ROOTFS" install -d -o "$MISO_LIVE_USER" -g "$MISO_LIVE_USER" \
+    "/home/${MISO_LIVE_USER}/Desktop"
+  if [[ -f "${ROOTFS}/usr/share/applications/wanuku-install.desktop" ]]; then
+    chroot_run "$ROOTFS" install -o "$MISO_LIVE_USER" -g "$MISO_LIVE_USER" -m 755 \
+      "/usr/share/applications/wanuku-install.desktop" \
+      "/home/${MISO_LIVE_USER}/Desktop/wanuku-install.desktop"
+  fi
   if [[ -f "${ROOTFS}/usr/share/applications/miso-install.desktop" ]]; then
-    chroot_run "$ROOTFS" install -d -o "$MISO_LIVE_USER" -g "$MISO_LIVE_USER" \
-      "/home/${MISO_LIVE_USER}/Desktop"
     chroot_run "$ROOTFS" install -o "$MISO_LIVE_USER" -g "$MISO_LIVE_USER" -m 755 \
       "/usr/share/applications/miso-install.desktop" \
       "/home/${MISO_LIVE_USER}/Desktop/miso-install.desktop"
@@ -419,9 +426,16 @@ stage_squashfs() {
 
   # WSL puede caerse si mksquashfs satura todos los núcleos; se limita por
   # defecto a 4 procesos y se puede ajustar con MISO_SQUASHFS_PROCESSORS.
+  # En hosts con poca RAM se reduce la memoria del compresor para no agotarla.
   local squash_processors="${MISO_SQUASHFS_PROCESSORS:-4}"
+  local squash_mem="${MISO_SQUASHFS_MEM:-1500M}"
+  local mem_kb
+  mem_kb="$(awk '/MemTotal/ {print $2}' /proc/meminfo 2>/dev/null || echo 0)"
+  if [[ "$mem_kb" =~ ^[0-9]+$ ]] && (( mem_kb > 0 && mem_kb < 2097152 )); then
+    squash_mem="${MISO_SQUASHFS_MEM:-512M}"
+  fi
   mksquashfs "$ROOTFS" "${ISOROOT}/live/filesystem.squashfs" \
-    -processors "$squash_processors" -mem 1500M \
+    -processors "$squash_processors" -mem "$squash_mem" \
     -comp zstd -Xcompression-level 15 -noappend
 
   ok "Squashfs generado"
@@ -448,7 +462,7 @@ insmod all_video
 insmod gfxterm
 terminal_output gfxterm
 
-menuentry "MiSO Desktop ${MISO_VERSION} (Live)" {
+menuentry "WanukuOS Desktop ${MISO_VERSION} (Live)" {
     linux /live/vmlinuz boot=live components quiet splash \\
         live-config.username=${MISO_LIVE_USER} \\
         live-config.hostname=${MISO_HOSTNAME} \\
@@ -459,7 +473,7 @@ menuentry "MiSO Desktop ${MISO_VERSION} (Live)" {
     initrd /live/initrd.img
 }
 
-menuentry "MiSO Desktop ${MISO_VERSION} (Live, gráficos seguros)" {
+menuentry "WanukuOS Desktop ${MISO_VERSION} (Live, gráficos seguros)" {
     linux /live/vmlinuz boot=live components nomodeset quiet splash \\
         live-config.username=${MISO_LIVE_USER} \\
         live-config.hostname=${MISO_HOSTNAME} \\
@@ -467,7 +481,7 @@ menuentry "MiSO Desktop ${MISO_VERSION} (Live, gráficos seguros)" {
     initrd /live/initrd.img
 }
 
-menuentry "MiSO Desktop ${MISO_VERSION} (Live, consola)" {
+menuentry "WanukuOS Desktop ${MISO_VERSION} (Live, consola)" {
     linux /live/vmlinuz boot=live components systemd.unit=multi-user.target \\
         live-config.username=${MISO_LIVE_USER} \\
         live-config.hostname=${MISO_HOSTNAME} \\

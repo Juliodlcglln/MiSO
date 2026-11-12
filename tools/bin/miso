@@ -10,14 +10,14 @@ BROKER="/usr/libexec/miso/misod"
 
 usage() {
   cat <<EOF
-MiSO Desktop ${MISO_VERSION} «${MISO_CODENAME}»
+WanukuOS ${MISO_VERSION} «${MISO_CODENAME}»
 
-Uso: miso <comando> [opciones]
+Uso: wanuku <comando> [opciones] (alias: miso)
 
 Comandos:
   status                        Estado del sistema, anillos y actualizaciones
-  update [check|apply]          Busca o aplica actualizaciones
-  rollback [list|restore <snap>|boot <snap>]
+  update [check|apply|prune]    Busca, aplica o depura actualizaciones
+  rollback [list|restore <snap>|boot <snap> [--reboot]]
                                 Gestiona instantáneas de recuperación
   ring <list|enable|disable> <anillo>
   app <list|search|install|remove|update>
@@ -89,8 +89,10 @@ case "${1:-help}" in
     ;;
 
   update)
+    sub="${2:-check}"
+    set -- "${@:3}"
     need_broker
-    exec pkexec "$BROKER" update "${2:-check}"
+    exec pkexec "$BROKER" update "$sub" "$@"
     ;;
 
   rollback)
@@ -98,8 +100,9 @@ case "${1:-help}" in
     if [[ "$sub" == "list" ]]; then
       exec /usr/bin/miso-updated list
     fi
+    set -- "${@:3}"
     need_broker
-    exec pkexec "$BROKER" rollback "$sub" "${3:-}"
+    exec pkexec "$BROKER" rollback "$sub" "$@"
     ;;
 
   ring)
@@ -107,13 +110,14 @@ case "${1:-help}" in
     if [[ "$sub" == "list" ]]; then
       exec /usr/bin/miso-rings list
     fi
+    set -- "${@:3}"
     need_broker
-    exec pkexec "$BROKER" ring "$sub" "${3:-}"
+    exec pkexec "$BROKER" ring "$sub" "$@"
     ;;
 
   app)
     sub="${2:-list}"
-    shift 2 2>/dev/null || true
+    set -- "${@:3}"
     command -v flatpak >/dev/null 2>&1 || {
       echo "Flatpak no está instalado." >&2
       exit 1

@@ -1,15 +1,85 @@
 #!/usr/bin/env bash
-# Marca el arranque como correcto. En 1.0 participará del health check A/B.
+# MiSO Desktop - health check de arranque.
+# Marca el arranque como correcto y, si detecta fallos repetidos, prepara
+# el siguiente arranque desde la última instantánea. No reinicia solo.
 
 set -Eeuo pipefail
 
 STATE_DIR="/var/lib/miso"
-mkdir -p "$STATE_DIR"
+LOG_DIR="/var/log/miso"
+LOG_FILE="${LOG_DIR}/boot.log"
+FAIL_FILE="${STATE_DIR}/boot-failures"
+HEALTH_FILE="${STATE_DIR}/boot-health"
 
-date -Is > "${STATE_DIR}/boot-ok"
-printf '%s\n' "$(uname -r)" > "${STATE_DIR}/boot-kernel"
+mkdir -p "$STATE_DIR" "$LOG_DIR"
 
-# Limpiar la marca de intento si existe (diseño A/B futuro).
-if command -v grub-editenv >/dev/null 2>&1 && [[ -f /boot/grub/grubenv ]]; then
-  grub-editenv /boot/grub/grubenv unset miso_try 2>/dev/null || true
+log() {
+  printf '%s miso-boot-ok %s\n' "$(date -Is)" "$*" | tee -a "$LOG_FILE"
+}
+
+fail=0
+detail=""
+
+# La raíz debe estar montada y escribible.
+if findmnt -n -o OPTIONS / 2>/dev/null | grep -qE '(^|,)ro(,|$)'; then
+  fail=1
+  detail="${detail} raíz de solo lectura;"
 fi
+
+# Unidades críticas.
+for unit in systemd-journald.service dbus.service; do
+  if ! systemctl is-active --quiet "$unit" 2>/dev/null; then
+    fail=1
+    detail="${detail} ${unit} inactiva;"
+  fi
+done
+
+# En un sistema con escritorio, SDDM debe estar activo.
+if [[ "$(systemctl get-default 2>/dev/null || true)" == "graphical.target" ]]; then
+  if systemctl list-unit-files --no-legend sddm.service 2>/dev/null | grep -q '^sddm\.service'; then
+    if ! systemctl is-active --quiet sddm.service 2>/dev/null; then
+      fail=1
+      detail="${detail} sddm.service inactiva;"
+    fi
+  fi
+fi
+
+# Unidades fallidas (solo se cuentan las que no son de arranque temprano).
+failed_units="$(systemctl --failed --no-legend 2>/dev/null | wc -l || true)"
+failed_units="${failed_units:-0}"
+if (( failed_units > 0 )); then
+  fail=1
+  detail="${detail} ${failed_units} unidad(es) systemd fallida(s);"
+fi
+
+if [[ $fail -eq 0 ]]; then
+  date -Is > "${STATE_DIR}/boot-ok"
+  printf '%s\n' "$(uname -r)" > "${STATE_DIR}/boot-kernel"
+  printf 'ok\n' > "$HEALTH_FILE"
+  rm -f "$FAIL_FILE"
+  if command -v grub-editenv >/dev/null 2>&1 && [[ -f /boot/grub/grubenv ]]; then
+    grub-editenv /boot/grub/grubenv unset miso_try 2>/dev/null || true
+  fi
+  log "arranque correcto (${detail:-sin incidencias})"
+  exit 0
+fi
+
+# Fallo: contar intentos y preparar recuperación tras dos fallos seguidos.
+attempts=0
+[[ -f "$FAIL_FILE" ]] && attempts="$(cat "$FAIL_FILE" 2>/dev/null || echo 0)"
+[[ "$attempts" =~ ^[0-9]+$ ]] || attempts=0
+attempts=$((attempts + 1))
+printf '%s\n' "$attempts" > "$FAIL_FILE"
+printf 'failed: %s\n' "$detail" > "$HEALTH_FILE"
+log "fallo de arranque (${attempts}): ${detail}"
+
+if (( attempts >= 2 )) && [[ -f "${STATE_DIR}/last-snapshot" ]]; then
+  snap="$(cat "${STATE_DIR}/last-snapshot" 2>/dev/null || true)"
+  if [[ -n "$snap" ]] && [[ -x /usr/bin/miso-updated ]]; then
+    log "preparando arranque de recuperación desde ${snap}"
+    /usr/bin/miso-updated boot "$snap" >>"$LOG_FILE" 2>&1 || \
+      log "no se pudo preparar el arranque desde ${snap}"
+  fi
+fi
+
+exit 1

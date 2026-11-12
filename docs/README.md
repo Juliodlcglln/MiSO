@@ -14,6 +14,7 @@ vez y como referencia después.
 | 07 | [Roadmap](07-roadmap.md) | Fases, entregables y criterios de aceptación |
 | 08 | [Decisiones técnicas](08-decisiones-tecnicas.md) | ADRs y alternativas consideradas |
 | 09 | [Licencias y gobernanza](09-licencias-y-gobernanza.md) | GPL, marcas, contribución y releases |
+| 10 | [Manual de continuación](10-manual-de-continuacion.md) | Estado real, procesos vivos y próximos pasos |
 
 ## Convenciones
 

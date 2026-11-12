@@ -1,13 +1,12 @@
 
-  MiSO Desktop 0.1.0 «Genesis»
+  WanukuOS 0.1.0 «Genesis»
   -----------------------------
   Base: Debian 13 (Trixie) + kernel Linux
 
   Comandos útiles:
-    miso status        Estado del sistema y actualizaciones
-    miso doctor        Diagnóstico completo
-    miso ring list     Anillos disponibles
-    pkexec calamares  Instalar MiSO Desktop (perfil desktop)
+    wanuku status      Estado del sistema y actualizaciones (alias: miso status)
+    wanuku doctor      Diagnóstico completo
+    wanuku ring list   Anillos disponibles
+    pkexec calamares   Instalar WanukuOS (perfil desktop)
 
-  Documentación: /usr/share/doc/miso-desktop/
-
+  Documentación: /usr/share/doc/wanuku-desktop/

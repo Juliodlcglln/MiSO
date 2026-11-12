@@ -1,6 +1,6 @@
 [Plymouth Theme]
-Name=MiSO
-Description=MiSO Desktop boot splash
+Name=WanukuOS
+Description=WanukuOS Desktop boot splash
 ModuleName=script
 
 [script]

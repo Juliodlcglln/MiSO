@@ -40,6 +40,7 @@ ark
 gwenview
 okular
 kcalc
+plasma-systemmonitor
 kdeconnect
 print-manager
 cups
@@ -53,8 +54,19 @@ udisks2
 upower
 power-profiles-daemon
 
+# Ofimática y productividad (suite LibreOffice / OpenOffice compatible)
+libreoffice-writer
+libreoffice-calc
+libreoffice-impress
+libreoffice-l10n-es
+
+# Multimedia y Música
+elisa
+vlc
+
 # Navegador y fuentes
 firefox-esr
+firefox-esr-l10n-es-es
 fonts-noto
 fonts-noto-color-emoji
 fonts-dejavu

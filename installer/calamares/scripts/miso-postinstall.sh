@@ -55,7 +55,12 @@ if findmnt -n -o FSTYPE / 2>/dev/null | grep -qx btrfs; then
   mkdir -p /.snapshots
 fi
 
-# 5. Limpieza.
+# 5. Regenerar GRUB con la consola serie y los scripts MiSO.
+if command -v update-grub >/dev/null 2>&1; then
+  update-grub >/dev/null 2>&1 || true
+fi
+
+# 6. Limpieza.
 apt-get clean 2>/dev/null || true
 rm -rf /var/lib/apt/lists/* 2>/dev/null || true
 

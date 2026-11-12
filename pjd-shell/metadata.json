@@ -1,18 +1,18 @@
 {
   "KPlugin": {
     "Id": "org.miso.pjd.desktop",
-    "Name": "PJD Shell",
-    "Description": "Capa de escritorio de MiSO Desktop sobre KDE Plasma",
+    "Name": "WanukuOS Shell",
+    "Description": "Capa de escritorio moderna de WanukuOS sobre KDE Plasma 6",
     "Version": "0.1.0",
     "License": "GPL-3.0-or-later",
     "Authors": [
       {
-        "Name": "Equipo MiSO",
-        "Email": "equipo@miso.local"
+        "Name": "Equipo WanukuOS",
+        "Email": "equipo@wanuku.local"
       }
     ],
     "EnabledByDefault": false,
-    "Icon": "miso-logo"
+    "Icon": "wanuku-logo"
   },
   "X-Plasma-API": "6.0",
   "KPackageStructure": "Plasma/LookAndFeel"

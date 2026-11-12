@@ -1,0 +1,30 @@
+# Normalización de finales de línea para el repo MiSO Desktop.
+* text=auto eol=lf
+
+# Scripts de Windows: PowerShell tolera LF, pero se mantiene CRLF por costumbre.
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Scripts y archivos de sistema sin extensión que deben ser LF.
+tools/bin/* text eol=lf
+tools/libexec/* text eol=lf
+pjd-shell/bin/* text eol=lf
+build/overlays/etc/* text eol=lf
+build/overlays/etc/default/* text eol=lf
+build/overlays/etc/skel/.config/* text eol=lf
+
+# Binarios.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.svg text eol=lf
+*.squashfs binary
+*.iso binary
+*.deb binary
+*.gz binary
+*.xz binary
+*.zst binary
+*.woff binary
+*.woff2 binary

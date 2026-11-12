@@ -28,11 +28,14 @@ case "${1:-status}" in
     ;;
 
   apply)
-    if ! command -v lookandfeeltool >/dev/null 2>&1; then
-      echo "lookandfeeltool no está disponible (¿Plasma instalado?)." >&2
+    if command -v plasma-apply-lookandfeel >/dev/null 2>&1; then
+      plasma-apply-lookandfeel -a org.miso.pjd.desktop
+    elif command -v lookandfeeltool >/dev/null 2>&1; then
+      lookandfeeltool -a org.miso.pjd.desktop
+    else
+      echo "No se encontró plasma-apply-lookandfeel ni lookandfeeltool (¿Plasma instalado?)." >&2
       exit 1
     fi
-    lookandfeeltool -a org.miso.pjd.desktop
     echo "PJD aplicado. Cierra sesión y vuelve a entrar para ver el layout completo."
     ;;
 

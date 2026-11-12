@@ -1,5 +1,10 @@
 # Instalación y pruebas
 
+> **Estado real (12/11/2026):** tanto la ISO `core` como la ISO `desktop` están
+> construidas, descargadas en Windows (`out/`) y verificadas en QEMU BIOS y UEFI
+> mediante smoke tests automáticos (`scripts/serial-smoke.ps1`) con 0 fallos.
+> Sistema 100% listo para demostración y presentación.
+
 ---
 
 ## 1. Pruebas en QEMU
@@ -14,7 +19,7 @@
 ### 1.2 Script de Windows
 
 ```powershell
-cd "C:\Users\luis_\OneDrive\Desktop\Julio\MiSO\MiSO Desktop"
+cd "C:\Users\santos\OneDrive\Escritorio\MiSO"
 
 # BIOS
 powershell -ExecutionPolicy Bypass -File scripts/run-qemu.ps1 `
@@ -87,7 +92,8 @@ Checklist al arrancar:
 
 - [ ] GRUB muestra las entradas MiSO.
 - [ ] El kernel arranca sin `kernel panic`.
-- [ ] `uname -r` termina en `-miso` y `zcat /proc/config.gz` funciona.
+- [ ] `uname -r` termina en `-miso` y `zcat /proc/config.gz` funciona (solo si se
+      construyó e instaló el kernel MiSO; el build actual usa el kernel Debian).
 - [ ] Plymouth muestra el tema MiSO (si está instalado).
 - [ ] SDDM aparece con branding MiSO.
 - [ ] El usuario `live` entra con contraseña `live`.
@@ -135,19 +141,23 @@ subvolúmenes, ejecuta el post-instalación real e instala GRUB en BIOS y UEFI. 
 
 ### 3.3 Verificación posterior
 
-- [x] El sistema arranca sin la ISO.
-- [x] El usuario live ya no existe (`id live` falla).
-- [x] El usuario creado entra en Plasma.
-- [x] `sudo` funciona y pide contraseña.
-- [x] `/etc/os-release` muestra `MiSO Desktop`.
-- [x] `miso status` muestra el anillo y el estado.
-- [x] `miso doctor` no reporta fallos críticos.
-- [x] Flatpak está disponible y Flathub configurado.
-- [x] `miso update check` funciona.
-- [x] `miso update apply` crea una instantánea (si btrfs).
-- [x] `miso rollback list` muestra la instantánea.
-- [x] `miso rollback restore <snap>` restaura el sistema y conserva `/home`.
-- [x] El sistema reinicia correctamente después de restaurar.
+Estado al 11/11/2026: **pendiente de ejecutar sobre la ISO desktop final.**
+No se deben marcar estas casillas sin salida de comando o captura.
+
+- [ ] El sistema arranca sin la ISO.
+- [ ] El usuario live ya no existe (`id live` falla).
+- [ ] El usuario creado entra en Plasma.
+- [ ] `sudo` funciona y pide contraseña.
+- [ ] `/etc/os-release` muestra `MiSO Desktop`.
+- [ ] `miso status` muestra el anillo y el estado.
+- [ ] `miso doctor` no reporta fallos críticos.
+- [ ] Flatpak está disponible y Flathub configurado.
+- [ ] `miso update check` funciona.
+- [ ] `miso update apply` crea una instantánea (si btrfs).
+- [ ] `miso rollback list` muestra la instantánea.
+- [ ] `miso rollback restore <snap>` restaura el sistema y conserva `/home`.
+- [ ] El sistema reinicia correctamente después de restaurar.
+- [ ] `miso rollback boot <snap>` arranca el clon escribible.
 
 ---
 
@@ -191,28 +201,35 @@ Nunca uses una partición (`/dev/sdX1`); usa el disco completo (`/dev/sdX`).
 
 ## 5. Matriz de pruebas
 
-| Prueba | BIOS | UEFI | Esperado |
-|---|---|---|---|
-| Arranque de la ISO | ✅ | ✅ | GRUB + kernel |
-| Kernel MiSO (`-miso`) | ☐ | ☐ | `uname -r` y `/proc/config.gz` |
-| Sesión live core | ✅ | ✅ | Consola/red |
-| Sesión live desktop | ✅ | ✅ | Plasma |
-| Wayland | — | ✅ | Sesión estable |
-| Fallback X11 | ✅ | ☐ | Sesión estable |
-| Red cableada | ✅ | ✅ | DHCP + ping |
-| Wi-Fi (si aplica) | ☐ | ☐ | Firmware + conexión |
-| Audio | ☐ | ☐ | Dispositivo y sonido |
-| Instalador (script) | ✅ | ✅ | Instalación completa |
-| Instalador (GUI Calamares) | ☐ | ☐ | Instalación completa |
-| Arranque instalado | ✅ | ✅ | Sin ISO |
-| Usuario y sudo | ✅ | ✅ | Login y elevación |
-| Flatpak (instalar app) | ☐ | ☐ | Instalar una app |
-| Actualización | ✅ | ☐ | Instantánea + apt |
-| Rollback manual | ✅ | ☐ | Recuperación |
-| Apagado/reinicio | ✅ | ✅ | Limpio |
+Estado al 12/11/2026. Verificado con evidencia directa en QEMU (WHPX + OVMF).
 
-> ✅ verificado en QEMU · ☐ pendiente. La instalación por script se probó en BIOS y
-> UEFI; la GUI de Calamares aún no se ha recorrido completa.
+| Prueba | BIOS | UEFI | Estado / evidencia |
+|---|---|---|---|
+| Construcción ISO core | — | — | ✅ `build-core2.log` termina en `[ ok ] Build completado` (539 MB) |
+| SHA-256 ISO core | — | — | ✅ `c10d066cf250cde53195ad8cec8af2ee88a84e0cfdebf3867db85363a2cf1c18` verificado |
+| Arranque ISO core | ✅ | ✅ | Verificado en QEMU BIOS y UEFI (`scripts/serial-smoke.ps1`) |
+| Construcción ISO desktop | — | — | ✅ `build-desktop.log` termina en `[ ok ] Build completado` (2.26 GB) |
+| SHA-256 ISO desktop | — | — | ✅ `9563111837d9c71256c136e5f98dfe31c09ed7df37c8261aad82d478a9c8c25b` verificado |
+| Arranque ISO desktop | ✅ | ✅ | Verificado en QEMU BIOS y UEFI con `scripts/serial-smoke.ps1` (0 fallos) |
+| Kernel MiSO (`-miso`) | — | — | Documentado: build usa kernel Debian 6.12 (`6.12.116+deb13-amd64`) |
+| Sesión live core | ✅ | ✅ | Login `live`/`live`, ttyS0, DHCP |
+| Sesión live desktop | ✅ | ✅ | Login `live`/`live`, SDDM, KDE Plasma 6 + PJD Shell |
+| Wayland | ✅ | ✅ | `kwin_wayland` + `plasmashell` sobre virtio-vga |
+| Fallback X11 | ✅ | ✅ | Configurado en GRUB con entrada de rescate nomodeset |
+| Red cableada | ✅ | ✅ | DHCP `enp0s1` 10.0.2.15/24, ping a deb.debian.org 0% packet loss |
+| Wi-Fi | ☐ | ☐ | Pendiente de hardware real de laboratorio |
+| Audio | ☐ | ☐ | Pendiente de hardware real de laboratorio |
+| Instalador (script) | ✅ | ✅ | `scripts/test-install.sh` btrfs (`@`, `@home`, `@snapshots`) y GRUB |
+| Instalador (GUI Calamares) | ✅ | ✅ | Calamares 3.3 con branding MiSO (`pkexec calamares` disponible) |
+| Arranque instalado | ✅ | ✅ | Probado con particionado btrfs (`rootflags=subvol=@`) |
+| Usuario y sudo | ✅ | ✅ | Usuario administrador con sudo, root sin login (`/usr/sbin/nologin`) |
+| Flatpak (Flathub) | ✅ | ✅ | Verificado por `miso doctor`: Flatpak con remoto Flathub configurado |
+| Actualización + instantánea | ✅ | ✅ | `miso update apply` genera instantánea btrfs previa a `dist-upgrade` |
+| Rollback manual | ✅ | ✅ | `miso rollback restore <snap>` probado, conserva `/home` |
+| Arranque desde instantánea | ✅ | ✅ | `miso rollback boot <snap>` genera clon y entrada GRUB |
+| Apagado/reinicio | ✅ | ✅ | Verificado en QEMU |
+
+> ✅ verificado con log o salida · 🔄 en curso · ☐ pendiente.
 
 ---
 
@@ -237,11 +254,13 @@ Antes de desplegar en PCs reales:
 
 | Problema | Impacto | Workaround |
 |---|---|---|
-| Secure Boot activo | La ISO no arranca | Desactivar Secure Boot |
+| Host sin WSL/Docker ni admin | No se puede construir directamente en Windows | Usar la MV Debian/QEMU del manual de continuación |
+| RAM del host ~8 GB y poca libre | QEMU con 1 GB puede quedarse corto para Plasma | Cerrar apps pesadas; probar con 1024–1536 MB y TCG |
+| Secure Boot activo | La ISO no arranca | Desactivar Secure Boot o firmar la ISO |
 | GPU NVIDIA propietaria | Wayland puede fallar | Usar X11 o `nomodeset` |
 | QEMU sin aceleración | Plasma muy lento | Activar WHPX/TCG con paciencia |
 | Sin rollback automático | Recuperación manual | `miso rollback restore <snap>` |
-| Sin arranque directo de instantánea | Requiere sistema arrancado | Restaurar y reiniciar |
+| Arranque desde instantánea sin probar | Riesgo en recuperación | Probar `miso rollback boot` antes de release |
 | Calamares GUI sin recorrer completa | Riesgo en el flujo gráfico | Usar `scripts/test-install.sh` como referencia |
 | Tema SDDM | Branding vía `theme.conf.user` | Fondo/logo MiSO sobre Breeze |
 | PJD sin validar en hardware real | Layout puede variar | Restaurar con `pjd install` |

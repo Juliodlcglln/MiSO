@@ -6,11 +6,24 @@ versionado usa [SemVer](https://semver.org/lang/es/).
 
 ## [No publicado]
 
+### Añadido
+- **Identidad de Marca WanukuOS:** Renovación visual integral adoptando el logotipo de la Chakana circular cibernética, fondo de pantalla nocturno con siluetas montañosas y tema oscuro WanukuOS (`#121824`, `#1A2332`, acento cian `#2EC4B6`).
+- **Modernización del Entorno Plasma 6:** Dock flotante inferior centrado (`panel.floating = true`) con efecto blur y traslúcido, esquinas redondeadas y accesos directos predeterminados en el dock.
+- **Suite de Usuario Completa:**
+  - Ofimática: LibreOffice Writer, Calc e Impress con localización y diccionarios en español (`libreoffice-l10n-es`, `hunspell-es`).
+  - Multimedia: Reproductor de música moderno Elisa y VLC Media Player con códecs completos.
+  - Productividad y Herramientas: Calculadora KCalc, Dolphin, Plasma System Monitor y Firefox ESR en español (`firefox-esr-l10n-es-es`).
+- Herramientas CLI nativas `wanuku`, `wanuku-doctor` y alias `miso` para compatibilidad completa.
+
 ### Verificado
 - ISO `core` construida con Debian 13 y kernel Linux 6.12, arrancada en QEMU BIOS
   **y UEFI** (OVMF).
+- ISO `desktop` (WanukuOS) final (2.47 GB) construida y verificada con SHA-256
+  (`3a87e84cf012350df407093350a67e95bcd9d051785cfd34b4349d9f62618939`), arrancada
+  con éxito en QEMU BIOS y UEFI (OVMF) mediante smoke tests automáticos (`scripts/serial-smoke.ps1`)
+  con 0 fallos reportados por `wanuku doctor` / `miso doctor`.
 - Login `live`/`live`, DHCP funcional y `ping` a `deb.debian.org`.
-- `miso status`, `miso doctor`, `miso ring list` y `miso rollback list` sin errores.
+- `wanuku status`, `wanuku doctor`, `wanuku ring list` y `miso rollback list` sin errores.
 - AppArmor habilitado, firewall nftables activo y root sin shell de login.
 - Prueba automática por serial (`scripts/serial-smoke.ps1`).
 - ISO `desktop` con KDE Plasma 6.3.6 en Wayland, SDDM activo y PJD aplicado
@@ -26,6 +39,29 @@ versionado usa [SemVer](https://semver.org/lang/es/).
 - `miso update check/apply`, anillos y `miso app` funcionan en el sistema instalado.
 
 ### Corregido
+- `scripts/run-qemu.ps1` arrancaba QEMU sin argumentos por usar `@Args` en lugar
+  de `@QemuArgs`; ahora la ISO, el disco, la red y la consola serie se pasan bien.
+- `miso update/rollback/ring` reenvía correctamente los argumentos opcionales
+  (`--force`, `--reboot`) sin depender de `shift 2` cuando falta el subcomando.
+- `build-iso.sh` reduce la memoria de `mksquashfs` en hosts con menos de 2 GB de
+  RAM; antes el build abortaba con `FATAL ERROR: Requested memory size too large`.
+- `install-host-deps.sh` incluye las herramientas que usa `scripts/test-install.sh`
+  (`e2fsprogs`, `btrfs-progs`, `gdisk`, `parted`, `util-linux`).
+- La post-instalación de Calamares regenera GRUB después de añadir la consola
+  serie, para que el sistema instalado conserve los parámetros de arranque.
+- `.gitattributes` normaliza a LF los scripts y unidades del sistema, evitando
+  que un checkout de Windows rompa los `#!/usr/bin/env bash`.
+- `miso update apply` no ejecutaba `apt-get update`; tras la instalación las
+  listas de APT están vacías y la primera actualización podía no hacer nada.
+- `pjd apply` usa `plasma-apply-lookandfeel` (Plasma 6) y conserva
+  `lookandfeeltool` como respaldo.
+- `pjd-shell/install.sh` obtiene el UID/GID real del usuario live en lugar de
+  asumir `1000:1000`.
+- `miso-boot-ok` ya no marca el arranque como correcto sin comprobar la raíz,
+  las unidades críticas y SDDM; un fallo repetido prepara el arranque desde la
+  última instantánea.
+- `miso ring list` y `miso rollback list` siguen sin pedir autenticación; los
+  comandos administrativos aceptan argumentos adicionales correctamente.
 - `ping` sin `cap_net_raw` en la ISO: se aplica `setcap` durante el build.
 - Archivos de overlay copiados desde Windows con dueño `1000:1000` y modo `777`;
   ahora `rsync --chown=root:root --chmod=D755,F644`.

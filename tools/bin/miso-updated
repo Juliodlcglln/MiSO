@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # MiSO Desktop - actualizador.
-# 0.1.0: instantánea btrfs + apt dist-upgrade.
-# La actualización A/B y el rollback automático llegan en la Fase 4.
+# 0.2.0: instantánea btrfs + apt, retención, arranque desde instantánea
+# y restauración manual. El rollback automático A/B llega en una fase posterior.
 
 set -Eeuo pipefail
 
@@ -10,6 +10,16 @@ SNAP_DIR="/.snapshots"
 LOG_DIR="/var/log/miso"
 LOG_FILE="${LOG_DIR}/updates.log"
 LOCK_FILE="/var/lock/miso-update.lock"
+SNAP_PREFIX="rollback"
+BOOT_PREFIX="boot"
+BOOT_MNT="/mnt/miso-boot"
+# Retención simple y predecible: se conservan las N instantáneas más recientes.
+KEEP_SNAPSHOTS="${MISO_KEEP_SNAPSHOTS:-10}"
+# Margen mínimo libre antes de crear una instantánea (MiB).
+MIN_FREE_MB="${MISO_MIN_FREE_MB:-1024}"
+[[ "$KEEP_SNAPSHOTS" =~ ^[0-9]+$ ]] || KEEP_SNAPSHOTS=10
+(( KEEP_SNAPSHOTS >= 1 )) || KEEP_SNAPSHOTS=10
+[[ "$MIN_FREE_MB" =~ ^[0-9]+$ ]] || MIN_FREE_MB=1024
 
 require_root() {
   [[ ${EUID} -eq 0 ]] || { echo "Esta operación requiere root (usa miso update ...)." >&2; exit 1; }
@@ -40,8 +50,27 @@ can_snapshot() {
   btrfs subvolume show / >/dev/null 2>&1
 }
 
+free_mb() {
+  df -Pm / 2>/dev/null | awk 'NR==2 {print $4}'
+}
+
+check_free_space() {
+  local avail
+  avail="$(free_mb)"
+  [[ -n "$avail" ]] || return 0
+  if (( avail < MIN_FREE_MB )); then
+    echo "Espacio libre insuficiente en /: ${avail} MiB (mínimo ${MIN_FREE_MB} MiB)." >&2
+    return 1
+  fi
+}
+
+snapshot_exists() {
+  btrfs subvolume show "$SNAP_DIR/$1" >/dev/null 2>&1
+}
+
 take_snapshot() {
   can_snapshot || return 1
+  check_free_space || return 1
   mkdir -p "$SNAP_DIR"
   # /.snapshots debe ser subvolumen para no incluirse en sus propias
   # instantáneas.
@@ -50,10 +79,126 @@ take_snapshot() {
       btrfs subvolume create "$SNAP_DIR" >/dev/null 2>&1 || true
     fi
   fi
-  local name
-  name="rollback-$(date +%Y%m%d-%H%M%S)"
+  local base name n=0
+  base="${SNAP_PREFIX}-$(date +%Y%m%d-%H%M%S)"
+  name="$base"
+  while snapshot_exists "$name"; do
+    n=$((n + 1))
+    name="${base}-${n}"
+  done
   btrfs subvolume snapshot -r / "${SNAP_DIR}/${name}" >/dev/null
   printf '%s\n' "$name"
+}
+
+prune_snapshots() {
+  command -v btrfs >/dev/null 2>&1 || return 0
+  [[ -d "$SNAP_DIR" ]] || return 0
+  local -a snaps=()
+  local snap
+  while IFS= read -r snap; do
+    [[ -n "$snap" ]] && snaps+=("$snap")
+  done < <(find "$SNAP_DIR" -maxdepth 1 -mindepth 1 -type d \
+             -name "${SNAP_PREFIX}-*" -printf '%f\n' | sort -V)
+
+  local count=${#snaps[@]}
+  (( count > KEEP_SNAPSHOTS )) || return 0
+  local remove=$((count - KEEP_SNAPSHOTS))
+  local i
+  for ((i = 0; i < remove; i++)); do
+    log "Eliminando instantánea antigua: ${snaps[$i]}"
+    btrfs subvolume delete "${SNAP_DIR}/${snaps[$i]}" >/dev/null 2>&1 || \
+      warn_delete "${snaps[$i]}"
+    # El clon de arranque asociado ya no tiene sentido sin su instantánea.
+    if btrfs subvolume show "${SNAP_DIR}/${BOOT_PREFIX}-${snaps[$i]}" >/dev/null 2>&1; then
+      btrfs subvolume delete "${SNAP_DIR}/${BOOT_PREFIX}-${snaps[$i]}" >/dev/null 2>&1 || \
+        warn_delete "${BOOT_PREFIX}-${snaps[$i]}"
+    fi
+  done
+}
+
+warn_delete() {
+  log "ADVERTENCIA: no se pudo eliminar la instantánea $1"
+}
+
+root_device() {
+  local src
+  src="$(findmnt -n -o SOURCE /)"
+  printf '%s\n' "${src%%\[*}"
+}
+
+# Ruta del subvolumen que contiene /.snapshots, relativa al subvolumen
+# superior del sistema de archivos (por ejemplo "@snapshots").
+snapshots_subvol() {
+  local opt sub
+  opt="$(findmnt -n -o OPTIONS "$SNAP_DIR" 2>/dev/null || true)"
+  sub="$(printf '%s\n' "$opt" | tr ',' '\n' | sed -n 's/^subvol=//p' | head -n 1)"
+  sub="${sub#/}"
+  [[ -n "$sub" ]] || sub="@snapshots"
+  printf '%s\n' "$sub"
+}
+
+# Crea un clon escribible de una instantánea para poder arrancar desde ella.
+# El clon es barato (COW) y su /etc/fstab apunta al propio subvolumen.
+create_boot_clone() {
+  local snap="$1"
+  is_btrfs || die "La raíz no es btrfs."
+  [[ "$snap" =~ ^[A-Za-z0-9._-]+$ ]] || die "Nombre de instantánea inválido."
+  local src="${SNAP_DIR}/${snap}" clone="${BOOT_PREFIX}-${snap}"
+  local dst="${SNAP_DIR}/${clone}" parent
+  btrfs subvolume show "$src" >/dev/null 2>&1 || die "No existe la instantánea ${snap}."
+  if ! btrfs subvolume show "$dst" >/dev/null 2>&1; then
+    check_free_space || die "Espacio libre insuficiente para crear el clon de arranque."
+    btrfs subvolume snapshot "$src" "$dst" >/dev/null || die "No se pudo clonar la instantánea."
+    # El clon es un subvolumen anidado dentro de @snapshots. Para montarlo
+    # hay que indicar la ruta completa desde el subvolumen superior.
+    parent="$(snapshots_subvol)"
+    mkdir -p "$BOOT_MNT"
+    mount -o "subvol=${parent}/${clone}" "$(root_device)" "$BOOT_MNT" || \
+      die "No se pudo montar el clon de arranque."
+    if [[ -f "${BOOT_MNT}/etc/fstab" ]]; then
+      # Solo la línea de la raíz: subvol=@ (o subvol=/@), no @home ni @snapshots.
+      sed -i -E "s#(subvol=/?@)([[:space:],]|$)#\\1snapshots/${clone}\\2#g" \
+        "${BOOT_MNT}/etc/fstab" || true
+    fi
+    umount "$BOOT_MNT" || true
+  fi
+  printf '%s\n' "$clone"
+}
+
+write_grub_snapshot_script() {
+  local script="/etc/grub.d/41_miso_snapshots"
+  cat > "$script" <<'EOS'
+#!/bin/sh
+# Generado por miso-updated. Entradas de arranque para clones de instantáneas.
+set -e
+SNAP_DIR="/.snapshots"
+UUID="$(findmnt -n -o UUID / 2>/dev/null || true)"
+[ -n "$UUID" ] || exit 0
+for d in "$SNAP_DIR"/boot-*; do
+  [ -d "$d" ] || continue
+  name="${d##*/}"
+  snap="${name#boot-}"
+  kern="$(find "$d/boot" -maxdepth 1 -type f -name 'vmlinuz-*' | sort -V | tail -n 1)"
+  init="$(find "$d/boot" -maxdepth 1 -type f -name 'initrd.img-*' | sort -V | tail -n 1)"
+  [ -n "$kern" ] && [ -n "$init" ] || continue
+  cat <<EOF
+menuentry "MiSO snapshot ${snap}" --class miso --class gnu-linux --class os {
+    insmod btrfs
+    search --no-floppy --fs-uuid --set=root ${UUID}
+    linux /@snapshots/${name}/boot/${kern##*/} root=UUID=${UUID} rootflags=subvol=@snapshots/${name} rw quiet splash console=tty0 console=ttyS0,115200
+    initrd /@snapshots/${name}/boot/${init##*/}
+}
+EOF
+done
+EOS
+  chmod 755 "$script"
+  if command -v update-grub >/dev/null 2>&1; then
+    update-grub >/dev/null
+  elif command -v grub-mkconfig >/dev/null 2>&1; then
+    grub-mkconfig -o /boot/grub/grub.cfg >/dev/null
+  else
+    log "ADVERTENCIA: no se encontró update-grub; añade la entrada manualmente."
+  fi
 }
 
 cmd_check() {
@@ -75,7 +220,7 @@ cmd_apply() {
 
   local snapshot=""
   if can_snapshot; then
-    snapshot="$(take_snapshot)" || die "No se pudo crear la instantánea."
+    snapshot="$(take_snapshot)" || die "No se pudo crear la instantánea (revisa el espacio libre)."
     log "Instantánea creada: ${SNAP_DIR}/${snapshot}"
   elif is_btrfs; then
     if [[ $force -eq 1 ]]; then
@@ -87,6 +232,17 @@ cmd_apply() {
     log "ADVERTENCIA: la raíz no es btrfs; se actualiza sin instantánea (--force)."
   else
     die "La raíz no es btrfs. Usa 'miso-updated apply --force' para actualizar sin instantánea."
+  fi
+
+  # Actualizar los índices antes del upgrade: la post-instalación borra
+  # /var/lib/apt/lists y, sin esto, la primera actualización no haría nada.
+  log "Actualizando índices de APT"
+  if ! apt-get update; then
+    log "La actualización de índices falló."
+    if [[ -n "$snapshot" ]]; then
+      log "La instantánea ${SNAP_DIR}/${snapshot} sigue disponible para recuperación."
+    fi
+    exit 1
   fi
 
   log "Iniciando apt dist-upgrade"
@@ -105,6 +261,7 @@ cmd_apply() {
   if [[ -n "$snapshot" ]]; then
     printf '%s\n' "$snapshot" > "${STATE_DIR}/last-snapshot"
     log "Actualización completada. Instantánea: ${snapshot}"
+    prune_snapshots
   else
     log "Actualización completada sin instantánea."
   fi
@@ -120,8 +277,17 @@ cmd_list() {
     [[ -n "$snap" ]] || continue
     found=1
     printf '%s\n' "$(basename "$snap")"
-  done < <(find "$SNAP_DIR" -maxdepth 1 -mindepth 1 -type d | sort)
+  done < <(find "$SNAP_DIR" -maxdepth 1 -mindepth 1 -type d \
+             -name "${SNAP_PREFIX}-*" | sort -V)
   [[ $found -eq 1 ]] || echo "No hay instantáneas."
+}
+
+cmd_prune() {
+  require_root
+  ensure_dirs
+  is_btrfs || die "La raíz no es btrfs."
+  prune_snapshots
+  log "Retención aplicada: se conservan ${KEEP_SNAPSHOTS} instantáneas."
 }
 
 cmd_restore() {
@@ -192,19 +358,33 @@ cmd_status() {
 
 cmd_boot() {
   require_root
-  local snap="${1:-}"
-  [[ -n "$snap" ]] || { echo "Uso: miso-updated boot <instantánea>" >&2; exit 2; }
-  cat <<EOF
-Instantánea solicitada: ${snap}
-Ruta: ${SNAP_DIR}/${snap}
+  ensure_dirs
+  local snap="${1:-}" reboot_now=0
+  [[ "${2:-}" == "--reboot" ]] && reboot_now=1
+  [[ -n "$snap" ]] || { echo "Uso: miso-updated boot <instantánea> [--reboot]" >&2; exit 2; }
+  [[ "$snap" =~ ^[A-Za-z0-9._-]+$ ]] || die "Nombre de instantánea inválido."
+  is_btrfs || die "La raíz no es btrfs."
+  [[ -d "${SNAP_DIR}/${snap}" ]] || die "No existe la instantánea ${snap}."
 
-Para volver al estado de esa instantánea sin arrancar otro medio:
-  sudo miso rollback restore ${snap}
+  local clone
+  clone="$(create_boot_clone "$snap")" || die "No se pudo preparar el arranque desde ${snap}."
+  write_grub_snapshot_script
+  log "Entrada de arranque preparada para ${snap} (${SNAP_DIR}/${clone})"
 
-El arranque directo desde una instantánea (entradas GRUB) y el rollback
-automático A/B llegan en la Fase 4.
-EOF
-  exit 3
+  if command -v grub-reboot >/dev/null 2>&1; then
+    if grub-reboot "MiSO snapshot ${snap}" 2>/dev/null; then
+      echo "El próximo arranque usará la instantánea ${snap}."
+    else
+      echo "No se pudo fijar el próximo arranque; elige la entrada 'MiSO snapshot ${snap}' en GRUB." >&2
+    fi
+  else
+    echo "grub-reboot no está disponible; elige 'MiSO snapshot ${snap}' en GRUB al reiniciar." >&2
+  fi
+  echo "El clon escribible está en ${SNAP_DIR}/${clone}; /home no se modifica."
+  if [[ $reboot_now -eq 1 ]]; then
+    log "Reiniciando en la instantánea ${snap}"
+    systemctl reboot
+  fi
 }
 
 case "${1:-status}" in
@@ -213,9 +393,10 @@ case "${1:-status}" in
   list)    cmd_list ;;
   status)  cmd_status ;;
   restore) shift; cmd_restore "$@" ;;
+  prune)   cmd_prune ;;
   boot)    shift; cmd_boot "$@" ;;
   *)
-    echo "Uso: miso-updated <check|apply [--force]|list|status|restore <snap> [--yes]|boot <snap>>" >&2
+    echo "Uso: miso-updated <check|apply [--force]|list|status|prune|restore <snap> [--yes]|boot <snap>>" >&2
     exit 2
     ;;
 esac

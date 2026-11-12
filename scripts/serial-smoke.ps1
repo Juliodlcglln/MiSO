@@ -1,4 +1,4 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 <#
 .SYNOPSIS
   Boots a MiSO ISO headless in QEMU, logs in over a serial TCP chardev and runs
@@ -19,6 +19,7 @@ param(
     [string]$Disk = "",
     [int]$Port = 4555,
     [int]$BootWait = 95,
+    [int]$Memory = 2048,
     [string]$User = "live",
     [string]$Password = "live",
     [switch]$Tcg,
@@ -62,7 +63,7 @@ if ($BootFromDisk) {
 }
 
 $qemuArgs = @(
-    "-name", "MiSO-Smoke", "-machine", "q35", "-smp", "4", "-m", "4096"
+    "-name", "WanukuOS-Smoke", "-machine", "q35", "-smp", "2", "-m", "$Memory"
 ) + $bootArgs + @(
     "-device", "virtio-vga", "-nic", "user,model=virtio-net-pci",
     "-chardev", "socket,id=ser0,host=127.0.0.1,port=$Port,server=on,wait=off",
@@ -90,7 +91,7 @@ if ($Uefi) {
     )
 }
 
-Write-Host "MiSO serial smoke test"
+Write-Host "WanukuOS serial smoke test"
 if ($BootFromDisk) { Write-Host "  Disco: $Disk" } else { Write-Host "  ISO:   $Iso" }
 Write-Host "  Log:   $Log"
 Write-Host ""

@@ -21,7 +21,7 @@ usage() {
 Uso: misod <verbo> [argumentos]
 
 Verbos:
-  update check|apply
+  update check|apply|prune
   rollback list|restore <instantánea>|boot <instantánea>
   ring list|enable|disable <anillo>
   install <paquete>
@@ -37,7 +37,7 @@ case "$cmd" in
     sub="${1:-check}"
     shift || true
     case "$sub" in
-      check|apply)
+      check|apply|prune)
         log "update ${sub}"
         exec /usr/bin/miso-updated "$sub" "$@"
         ;;
@@ -67,12 +67,19 @@ case "$cmd" in
         ;;
       boot)
         snap="${1:?Falta la instantánea}"
+        shift || true
         [[ "$snap" =~ ^[A-Za-z0-9._-]+$ ]] || {
           echo "Nombre de instantánea inválido." >&2
           exit 2
         }
+        for arg in "$@"; do
+          [[ "$arg" == "--reboot" ]] || {
+            echo "Argumento inválido para rollback boot: ${arg}" >&2
+            exit 2
+          }
+        done
         log "rollback boot ${snap}"
-        exec /usr/bin/miso-updated boot "$snap"
+        exec /usr/bin/miso-updated boot "$snap" "$@"
         ;;
       *)
         echo "Subcomando de rollback inválido: ${sub}" >&2

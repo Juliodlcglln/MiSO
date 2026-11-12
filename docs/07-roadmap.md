@@ -144,29 +144,32 @@ La interfaz gráfica de Calamares queda como comprobación de humo pendiente.
 
 Entregables:
 
-- [x] `miso update apply` con instantánea btrfs.
+- [x] `miso update apply` con instantánea btrfs y `apt-get update` previo.
 - [x] `miso rollback list` y recuperación guiada.
 - [x] `miso rollback restore <snap>` con restauración de archivos (conserva `/home`).
-- [ ] Entradas de arranque para instantáneas o diseño A/B.
-- [ ] Health check de arranque.
-- [ ] Retención de instantáneas.
+- [x] Entradas de arranque para instantáneas (`miso rollback boot`).
+- [x] Health check de arranque (`miso-boot-ok`).
+- [x] Retención de instantáneas (`miso update prune`, `MISO_KEEP_SNAPSHOTS`).
 - [x] Pruebas de fallo y recuperación (restauración + reinicio verificado).
 
 Tareas:
 
 1. [x] Decidir GRUB+snapshots vs A/B+systemd-boot (0.1.0: GRUB+snapshots).
 2. [ ] Implementar montaje del slot inactivo.
-3. [ ] Implementar `grubenv` y health check.
-4. [ ] Implementar rollback automático.
+3. [x] Implementar health check de arranque y recuperación desde instantánea.
+4. [ ] Implementar rollback automático A/B con `grubenv`.
 5. [x] Probar recuperación tras modificar el sistema.
 6. [x] Documentar el procedimiento.
 
 **Estado:** el rollback manual está verificado de punta a punta en el sistema
-instalado. `miso update apply` crea una instantánea de solo lectura en
-`/.snapshots`; `miso rollback restore <snap>` restaura los archivos del sistema
-(excepto `/home`, `/.snapshots` y `/boot/efi`), deja una instantánea de seguridad y
-el equipo reinicia sin errores. El rollback **automático** y el arranque directo
-desde una instantánea quedan para una versión posterior de F4.
+instalado. `miso update apply` actualiza índices, crea una instantánea de solo
+lectura en `/.snapshots`, ejecuta `apt dist-upgrade` y aplica retención.
+`miso rollback restore <snap>` restaura los archivos del sistema (excepto `/home`,
+`/.snapshots` y `/boot/efi`) y deja una instantánea de seguridad. `miso rollback
+boot <snap>` crea un clon escribible, genera una entrada GRUB y fija el próximo
+arranque. `miso-boot-ok` comprueba el arranque y, tras dos fallos, prepara la
+recuperación. El **rollback automático A/B** con slot inactivo y `grubenv` queda
+para una versión posterior de F4.
 
 ---
 

@@ -28,6 +28,11 @@ apt-get install -y --no-install-recommends \
   grub-efi-amd64-bin \
   grub-common \
   dosfstools \
+  e2fsprogs \
+  btrfs-progs \
+  gdisk \
+  parted \
+  util-linux \
   rsync \
   ca-certificates \
   curl \
@@ -37,7 +42,22 @@ apt-get install -y --no-install-recommends \
   shellcheck \
   file \
   zstd \
-  xz-utils
+  xz-utils \
+  build-essential \
+  libssl-dev \
+  libelf-dev \
+  libncurses-dev \
+  bison \
+  flex \
+  bc \
+  dwarves \
+  cpio \
+  kmod \
+  dpkg-dev \
+  debhelper \
+  fakeroot \
+  python3 \
+  python3-yaml
 
 echo
 echo "Dependencias instaladas."

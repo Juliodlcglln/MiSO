@@ -1,10 +1,12 @@
 [Unit]
-Description=MiSO Desktop - marcar arranque correcto
-After=systemd-user-sessions.service
+Description=MiSO Desktop - comprobar arranque y preparar recuperación
+After=systemd-user-sessions.service sddm.service
+Wants=sddm.service
 
 [Service]
 Type=oneshot
 ExecStart=/usr/libexec/miso/miso-boot-ok
+SuccessExitStatus=0 1
 RemainAfterExit=yes
 
 [Install]

@@ -1,8 +1,8 @@
-# Tema GRUB de MiSO Desktop
+# Tema GRUB de WanukuOS Desktop
 # Se instala en /boot/grub/themes/miso/theme.txt
 
 title-text: ""
-desktop-color: "#0B1220"
+desktop-color: "#121824"
 terminal-font: "Unifont Regular 16"
 
 + boot_menu {
@@ -12,7 +12,7 @@ terminal-font: "Unifont Regular 16"
     height = 46%
     item_font = "DejaVu Sans Regular 16"
     item_color = "#E6EDF7"
-    selected_item_color = "#3DD6C4"
+    selected_item_color = "#2EC4B6"
     item_height = 34
     item_spacing = 8
     item_padding = 6
@@ -23,7 +23,7 @@ terminal-font: "Unifont Regular 16"
     left = 0
     width = 100%
     align = "center"
-    text = "MiSO Desktop"
+    text = "WanukuOS Desktop"
     font = "DejaVu Sans Bold 30"
     color = "#E6EDF7"
 }

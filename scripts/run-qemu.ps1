@@ -1,4 +1,4 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 <#
 .SYNOPSIS
   Arranca una ISO de MiSO Desktop en QEMU (BIOS o UEFI).
@@ -11,11 +11,12 @@
 #>
 param(
     [string]$Iso = "",
-    [string]$Memory = "4G",
+    [string]$Memory = "1536M",
     [int]$Cpus = 4,
     [switch]$Uefi,
     [switch]$Tcg,
-    [switch]$NoGl,
+    [string]$Display = "sdl",
+    [switch]$Gl,
     [string]$Disk = ""
 )
 
@@ -42,7 +43,7 @@ New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 $SerialLog = Join-Path $OutDir "qemu-serial.log"
 
 $QemuArgs = @(
-    "-name", "MiSO Desktop",
+    "-name", "WanukuOS Desktop",
     "-machine", "q35",
     "-smp", "$Cpus",
     "-m", $Memory
@@ -96,8 +97,12 @@ $QemuArgs += @(
     "-serial", "file:$SerialLog"
 )
 
-if (-not $NoGl) {
+if ($Gl) {
     $QemuArgs += @("-display", "gtk,gl=on")
+} elseif ($Display -eq "gtk") {
+    $QemuArgs += @("-display", "gtk")
+} else {
+    $QemuArgs += @("-display", "sdl")
 }
 
 if (-not [string]::IsNullOrWhiteSpace($Disk)) {
@@ -109,10 +114,10 @@ if (-not [string]::IsNullOrWhiteSpace($Disk)) {
     $QemuArgs += @("-drive", "file=$Disk,if=virtio,format=qcow2")
 }
 
-Write-Host "MiSO Desktop - QEMU"
+Write-Host "WanukuOS Desktop - QEMU"
 Write-Host "  ISO:    $Iso"
 Write-Host "  Modo:   $(if ($Uefi) { 'UEFI' } else { 'BIOS' }) / $(if ($Tcg) { 'TCG' } else { 'WHPX' })"
 Write-Host "  Serial: $SerialLog"
 Write-Host ""
 
-& $Qemu @Args
+& $Qemu @QemuArgs
