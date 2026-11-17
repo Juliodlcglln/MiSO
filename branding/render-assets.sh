@@ -20,6 +20,7 @@ WALL_SVG="${HERE}/wallpapers/wanuku-default.svg"
 LOGO_PNG_256="${HERE}/logo/wanuku-logo.png"
 LOGO_PNG_64="${HERE}/logo/wanuku-logo-64.png"
 WALL_PNG="${HERE}/wallpapers/wanuku-default.png"
+WALL_JPG="${HERE}/wallpapers/wanuku-fondo.jpg"
 
 echo "[wanuku] Instalando assets de branding WanukuOS"
 
@@ -30,6 +31,11 @@ if [[ -f "$WALL_PNG" ]]; then
   cp -f "$WALL_PNG" "${ROOTFS}/usr/share/wallpapers/miso-default.png"
   cp -f "$WALL_PNG" "${ROOTFS}/usr/share/backgrounds/wanuku-default.png"
   cp -f "$WALL_PNG" "${ROOTFS}/usr/share/backgrounds/miso-default.png"
+fi
+# Fondo de escritorio elegido para WanukuOS (fotografía 16:9).
+if [[ -f "$WALL_JPG" ]]; then
+  install -Dm644 "$WALL_JPG" "${ROOTFS}/usr/share/wallpapers/wanuku-fondo.jpg"
+  install -Dm644 "$WALL_JPG" "${ROOTFS}/usr/share/backgrounds/wanuku-fondo.jpg"
 fi
 
 # 2. Pixmaps y logos del sistema

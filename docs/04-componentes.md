@@ -181,7 +181,8 @@ Comprueba:
 
 - Muestra versión, base, estado de red y accesos rápidos.
 - Ofrece `miso doctor`, `miso update check` y el instalador.
-- Se lanza desde un `.desktop` de autostart en la sesión live.
+- Se ejecuta manualmente con `miso-welcome`; ya no se inicia automáticamente
+  en la sesión live.
 
 **Ruta:** `tools/bin/miso-welcome` → `/usr/bin/miso-welcome`.
 
@@ -207,7 +208,9 @@ pjd-shell/
 **Instalación:** `/usr/share/plasma/look-and-feel/org.miso.pjd.desktop/`.
 
 **Activación:** `/etc/skel/.config/kdeglobals` con
-`LookAndFeelPackage=org.miso.pjd.desktop`.
+`LookAndFeelPackage=org.miso.pjd.desktop`. El archivo `contents/defaults` del
+tema declara `[Desktop][org.kde.plasma.desktop] Containment=org.kde.desktopcontainment`
+para que el escritorio no muestre iconos ni carpeta.
 
 **Estado:** esqueleto; requiere validación en Plasma 6.
 
@@ -219,6 +222,7 @@ pjd-shell/
 |---|---|---|
 | Logo | `branding/logo/miso-logo.svg` | `/usr/share/pixmaps/miso-logo.png` |
 | Fondo | `branding/wallpapers/miso-default.svg` | `/usr/share/wallpapers/miso-default.png` |
+| Fondo de escritorio | `branding/wallpapers/wanuku-fondo.jpg` | `/usr/share/wallpapers/wanuku-fondo.jpg` |
 | Tema GRUB | `branding/grub/` | `/boot/grub/themes/miso/` |
 | Plymouth | `branding/plymouth/` | `/usr/share/plymouth/themes/miso/` |
 | SDDM | `branding/sddm/10-miso.conf` | `/etc/sddm.conf.d/` |

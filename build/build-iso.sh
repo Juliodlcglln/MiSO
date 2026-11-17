@@ -287,10 +287,6 @@ EOF
   [[ -f "${ROOTFS}/etc/calamares/scripts/miso-postinstall.sh" ]] && \
     chmod 755 "${ROOTFS}/etc/calamares/scripts/miso-postinstall.sh"
 
-  # El lanzador del instalador en el escritorio debe ser ejecutable para que
-  # Plasma lo trate como un acceso directo de confianza.
-  chmod 755 "${ROOTFS}/etc/skel/Desktop/miso-install.desktop" 2>/dev/null || true
-
   # Documentación dentro del sistema
   mkdir -p "${ROOTFS}/usr/share/doc/miso-desktop"
   cp -a "${PROJECT_ROOT}/docs/." "${ROOTFS}/usr/share/doc/miso-desktop/"
@@ -344,19 +340,24 @@ EOF
     sudo,audio,video,plugdev,netdev,render,adm,systemd-journal \
     "$MISO_LIVE_USER" 2>/dev/null || true
 
-  # Acceso directo al instalador en el escritorio de la sesión live.
+  # El escritorio de la sesión live se deja vacío: el instalador se abre desde
+  # el dock o el menú de aplicaciones, no desde un icono del escritorio.
+  chroot_run "$ROOTFS" install -d -m 755 "/etc/skel/Desktop"
   chroot_run "$ROOTFS" install -d -o "$MISO_LIVE_USER" -g "$MISO_LIVE_USER" \
     "/home/${MISO_LIVE_USER}/Desktop"
-  if [[ -f "${ROOTFS}/usr/share/applications/wanuku-install.desktop" ]]; then
-    chroot_run "$ROOTFS" install -o "$MISO_LIVE_USER" -g "$MISO_LIVE_USER" -m 755 \
-      "/usr/share/applications/wanuku-install.desktop" \
-      "/home/${MISO_LIVE_USER}/Desktop/wanuku-install.desktop"
-  fi
-  if [[ -f "${ROOTFS}/usr/share/applications/miso-install.desktop" ]]; then
-    chroot_run "$ROOTFS" install -o "$MISO_LIVE_USER" -g "$MISO_LIVE_USER" -m 755 \
-      "/usr/share/applications/miso-install.desktop" \
-      "/home/${MISO_LIVE_USER}/Desktop/miso-install.desktop"
-  fi
+  chroot_run "$ROOTFS" find "/home/${MISO_LIVE_USER}/Desktop" "/etc/skel/Desktop" \
+    -maxdepth 1 -type f -name '*.desktop' -delete 2>/dev/null || true
+
+  # Sin mensaje de bienvenida automático al iniciar la sesión live.
+  rm -f "${ROOTFS}/etc/xdg/autostart/miso-welcome.desktop"
+  rm -f "${ROOTFS}/home/${MISO_LIVE_USER}/.config/autostart/miso-welcome.desktop"
+
+  # Restablece el layout de Plasma del usuario live para que PJD se aplique sin
+  # Folder View (sin la ventana "Carpeta de escritorio") y con el nuevo fondo.
+  chroot_run "$ROOTFS" rm -f \
+    "/home/${MISO_LIVE_USER}/.config/plasma-org.kde.plasma.desktop-appletsrc" \
+    "/home/${MISO_LIVE_USER}/.config/plasma-org.kde.plasma.desktop-appletsrc.bak" \
+    "/home/${MISO_LIVE_USER}/.config/plasmashellrc" 2>/dev/null || true
 
   # Desactiva el Centro de bienvenida de KDE: MiSO tiene su propia bienvenida.
   if [[ -f "${ROOTFS}/etc/skel/.config/kded6rc" ]]; then

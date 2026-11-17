@@ -176,8 +176,8 @@ sudo bash kernel/build-kernel.sh   # ver kernel/README.md
 - Ejecuta `branding/render-assets.sh`.
 - Ejecuta `pjd-shell/install.sh`.
 - Crea el usuario live `live` (contraseña `live`, solo live).
-- Copia el acceso directo **Instalar MiSO Desktop** (`pkexec calamares`) al
-  escritorio de la sesión live y al menú de aplicaciones.
+- Deja el escritorio live vacío (sin iconos ni Folder View); el instalador
+  queda accesible desde el dock y el menú de aplicaciones.
 - Escribe `/etc/miso/release` con versión y perfil.
 - Habilita servicios.
 
@@ -240,8 +240,8 @@ scripts/
   comandos; sirve para verificar identidad, red, servicios y `miso doctor`.
 - `desktop-screenshot.ps1` usa el monitor de QEMU (`screendump`) para capturar la
   pantalla sin interacción manual.
-- `install-gui-smoke.ps1` arranca la ISO con un disco vacío, enfoca la consola de
-  bienvenida, lanza `sudo calamares` y guarda capturas del asistente.
+- `install-gui-smoke.ps1` arranca la ISO con un disco vacío, abre Konsole desde
+  el lanzador, lanza `sudo calamares` y guarda capturas del asistente.
 - `test-install.sh` extrae `filesystem.squashfs` a una imagen GPT (BIOS + ESP +
   raíz btrfs/ext4), crea los subvolúmenes `@`, `@home` y `@snapshots`, ejecuta el
   `miso-postinstall.sh` real e instala GRUB para BIOS y UEFI. Copia las herramientas

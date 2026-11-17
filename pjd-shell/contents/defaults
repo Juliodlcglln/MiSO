@@ -1,2 +1,7 @@
-[General]
-ColorScheme=MiSO
+[kdeglobals][General]
+ColorScheme=WanukuOS
+
+# Escritorio sin iconos ni carpeta visible: usa la contención "Desktop" de
+# Plasma en lugar de "Folder View". El fondo lo define el layout PJD.
+[Desktop][org.kde.plasma.desktop]
+Containment=org.kde.desktopcontainment

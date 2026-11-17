@@ -37,14 +37,13 @@ panel.addWidget("org.kde.plasma.systemtray");
 // Reloj digital estilizado
 panel.addWidget("org.kde.plasma.digitalclock");
 
-// Escritorios: fondo WanukuOS e iconos de ~/Desktop
+// Escritorios: fondo WanukuOS sin iconos ni carpeta de escritorio.
+// No se añade el widget Folder View: el escritorio queda limpio, solo con
+// el fondo, y no aparece la ventana "Carpeta de escritorio" al iniciar.
 var desktops = desktops();
 for (var i = 0; i < desktops.length; i++) {
     var d = desktops[i];
     d.wallpaperPlugin = "org.kde.image";
     d.currentConfigGroup = ["Wallpaper", "org.kde.image", "General"];
-    d.writeConfig("Image", "file:///usr/share/wallpapers/wanuku-default.png");
-
-    // Folder View: muestra ~/Desktop (incluye "Instalar WanukuOS").
-    d.addWidget("org.kde.plasma.folder");
+    d.writeConfig("Image", "file:///usr/share/wallpapers/wanuku-fondo.jpg");
 }

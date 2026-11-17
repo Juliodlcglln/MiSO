@@ -43,7 +43,8 @@ Checklist mínimo antes de dar por buena una ISO.
 - [ ] El usuario `live` entra con contraseña `live`.
 - [ ] Plasma inicia.
 - [ ] El panel PJD aparece.
-- [ ] `miso-welcome` se muestra.
+- [ ] El escritorio está limpio: solo el fondo, sin iconos ni carpeta.
+- [ ] No se abre la ventana de bienvenida ni la "Carpeta de escritorio".
 - [ ] `sudo calamares` abre el instalador.
 
 ## 5. Instalación

@@ -8,6 +8,12 @@
 
 .EXAMPLE
   .\scripts\run-qemu.ps1 -Iso "out\miso-desktop-0.1.0-desktop-amd64.iso" -Uefi -Memory 4G
+
+.EXAMPLE
+  .\scripts\run-qemu.ps1 -Iso "out\miso-desktop-0.1.0-desktop-amd64.iso" -Audio dsound
+
+.EXAMPLE
+  .\scripts\run-qemu.ps1 -Iso "out\miso-desktop-0.1.0-desktop-amd64.iso" -Audio none
 #>
 param(
     [string]$Iso = "",
@@ -17,6 +23,8 @@ param(
     [switch]$Tcg,
     [string]$Display = "sdl",
     [switch]$Gl,
+    [ValidateSet("sdl", "dsound", "none")]
+    [string]$Audio = "sdl",
     [string]$Disk = ""
 )
 
@@ -97,6 +105,16 @@ $QemuArgs += @(
     "-serial", "file:$SerialLog"
 )
 
+# Audio: QEMU ya no crea tarjeta de sonido por defecto, hay que declararla.
+# snd-hda-intel + PipeWire (pipewire-pulse + wireplumber) en el invitado.
+if ($Audio -ne "none") {
+    $QemuArgs += @(
+        "-audiodev", "$Audio,id=snd0",
+        "-device", "intel-hda",
+        "-device", "hda-duplex,audiodev=snd0"
+    )
+}
+
 if ($Gl) {
     $QemuArgs += @("-display", "gtk,gl=on")
 } elseif ($Display -eq "gtk") {
@@ -117,6 +135,7 @@ if (-not [string]::IsNullOrWhiteSpace($Disk)) {
 Write-Host "WanukuOS Desktop - QEMU"
 Write-Host "  ISO:    $Iso"
 Write-Host "  Modo:   $(if ($Uefi) { 'UEFI' } else { 'BIOS' }) / $(if ($Tcg) { 'TCG' } else { 'WHPX' })"
+Write-Host "  Audio:  $Audio"
 Write-Host "  Serial: $SerialLog"
 Write-Host ""
 

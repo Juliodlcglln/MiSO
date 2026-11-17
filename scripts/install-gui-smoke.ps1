@@ -156,9 +156,15 @@ try {
     Start-Sleep -Seconds 3
     Save-Shot "02-escritorio-limpio"
 
-    # Enfoca la consola de bienvenida de MiSO y lanza Calamares con sudo.
-    Write-Host "Abriendo Calamares desde la consola..."
-    Move-Click 240 300
+    # Abre Konsole desde el lanzador (la bienvenida ya no se inicia sola)
+    # y lanza Calamares con sudo.
+    Write-Host "Abriendo Konsole y Calamares..."
+    Send-Monitor "sendkey meta_l"
+    Start-Sleep -Seconds 2
+    Send-Text "konsole"
+    Start-Sleep -Seconds 1
+    Send-Monitor "sendkey ret"
+    Start-Sleep -Seconds 4
     Send-Text "sudo calamares"
     Start-Sleep -Milliseconds 400
     Send-Monitor "sendkey ret"

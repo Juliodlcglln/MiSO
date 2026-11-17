@@ -68,6 +68,9 @@ Los nombres exactos de los archivos OVMF pueden variar según la versión de QEM
 - `Ctrl+Alt+F2` cambia a una TTY si la sesión gráfica falla.
 - `Ctrl+Alt+G` libera el mouse.
 - Para depurar el arranque, añade `console=ttyS0` y usa `-serial file:serial.log`.
+- Audio: QEMU no crea tarjeta de sonido por defecto. `run-qemu.ps1` configura
+  `-audiodev sdl` + `intel-hda`/`hda-duplex`; cambia el backend con `-Audio dsound`
+  o desactívalo con `-Audio none`. El invitado trae PipeWire, WirePlumber y `plasma-pa`.
 - Para probar el instalador necesitas un disco virtual:
 
 ```powershell
@@ -103,7 +106,7 @@ Checklist al arrancar:
 - [ ] El audio se detecta (si QEMU lo expone).
 - [ ] `miso status` y `miso doctor` responden.
 - [ ] `sudo` pide contraseña y funciona.
-- [ ] Calamares se abre desde el escritorio o `sudo calamares`.
+- [ ] Calamares se abre desde el dock, el menú de aplicaciones o `sudo calamares`.
 
 ---
 

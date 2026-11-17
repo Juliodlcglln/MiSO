@@ -13,3 +13,4 @@ StartupNotify=true
 Categories=Qt;System;
 Keywords=install;instalar;calamares;wanuku;miso;
 X-AppStream-Ignore=true
+NoDisplay=true

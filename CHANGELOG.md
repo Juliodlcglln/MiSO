@@ -15,6 +15,18 @@ versionado usa [SemVer](https://semver.org/lang/es/).
   - Productividad y Herramientas: Calculadora KCalc, Dolphin, Plasma System Monitor y Firefox ESR en español (`firefox-esr-l10n-es-es`).
 - Herramientas CLI nativas `wanuku`, `wanuku-doctor` y alias `miso` para compatibilidad completa.
 
+### Cambiado
+- **Fondo de escritorio:** se usa la fotografía `Fondo/fondo.jfif.jpeg`
+  (`branding/wallpapers/wanuku-fondo.jpg`) como fondo de Plasma, instalada en
+  `/usr/share/wallpapers/wanuku-fondo.jpg`.
+- **Escritorio limpio:** el layout PJD usa la contención
+  `org.kde.desktopcontainment` (sin Folder View), por lo que no se muestran
+  iconos ni se abre la ventana "Carpeta de escritorio" al iniciar. Los
+  lanzadores de instalación se quitan del escritorio y quedan en el dock y el
+  menú de aplicaciones.
+- **Sin bienvenida automática:** se elimina el autostart `miso-welcome.desktop`;
+  el mensaje sigue disponible ejecutando `miso-welcome` manualmente.
+
 ### Verificado
 - ISO `core` construida con Debian 13 y kernel Linux 6.12, arrancada en QEMU BIOS
   **y UEFI** (OVMF).
@@ -39,6 +51,13 @@ versionado usa [SemVer](https://semver.org/lang/es/).
 - `miso update check/apply`, anillos y `miso app` funcionan en el sistema instalado.
 
 ### Corregido
+- **Sin audio en QEMU:** `run-qemu.ps1` no declaraba tarjeta de sonido y QEMU ya no
+  la crea por defecto. Ahora añade `-audiodev sdl` + `intel-hda`/`hda-duplex`
+  (parámetro `-Audio sdl|dsound|none`) y `make run` lo pasa con `AUDIO=sdl`.
+- **`make run` no arrancaba:** usaba la ISO `core` (nunca construida) en lugar de
+  la del perfil activo, y `powershell` no se resolvía en shells de login de WSL.
+  Ahora usa `out/miso-desktop-0.1.0-$(PROFILE)-amd64.iso`, `MEMORY=4G` y una ruta
+  absoluta de respaldo para PowerShell.
 - `scripts/run-qemu.ps1` arrancaba QEMU sin argumentos por usar `@Args` en lugar
   de `@QemuArgs`; ahora la ISO, el disco, la red y la consola serie se pasan bien.
 - `miso update/rollback/ring` reenvía correctamente los argumentos opcionales

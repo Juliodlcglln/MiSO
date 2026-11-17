@@ -55,14 +55,14 @@ powershell -ExecutionPolicy Bypass -File scripts\run-qemu.ps1 `
 3. **Escritorio KDE Plasma 6 + PJD Shell:**
    * Dock flotante centrado con bordes redondeados y estilo contemporáneo.
    * Iconos anclados en el dock: Dolphin, Firefox, LibreOffice, Elisa, VLC, KCalc, Monitor del sistema y Konsole.
-   * Acceso directo en el escritorio: **Instalar WanukuOS**.
+   * Acceso al instalador desde el dock y el menú de aplicaciones: **Instalar WanukuOS**.
 4. **Terminal / Diagnóstico:**
    * Abrir Konsole.
    * Ejecutar `wanuku status` (muestra anillo activo y estado general).
    * Ejecutar `wanuku doctor` (diagnóstico en vivo con 0 errores, AppArmor y nftables activos).
    * Ejecutar `wanuku ring list` (demuestra el modelo de 4 anillos).
 5. **Instalador:**
-   * Doble clic en "Instalar WanukuOS" en el escritorio o ejecutar `pkexec calamares`.
+   * Abrir "Instalar WanukuOS" desde el dock o ejecutar `pkexec calamares`.
    * Mostrar el asistente gráfico con marca WanukuOS, textos en español y particionado btrfs con subvolúmenes `@`, `@home`, `@snapshots`.
 
 ### 3. Pasos completados en la preparación:
